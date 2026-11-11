@@ -39,8 +39,12 @@ make swag             # api/docs from the handlers' godoc
 
 make otelcol          # otelcol/_build/aio11y-otelcol (static, linux/amd64)
 make otelcol-validate # render a target's configuration and validate it with the collector
-make -C otelcol test  # tests of the collector's own components
+make -C otelcol test  # tests of the collector's own components and install scripts
 ```
+
+To run the collector on a VM, [otelcol/install](otelcol/install/README.md)
+registers the VM as a target, fetches its configuration and installs a systemd
+service.
 
 The service starts with no configuration; each part it is not given (database,
 CB-Tumblebug, metrics backend) leaves the routes that need it answering 503.
