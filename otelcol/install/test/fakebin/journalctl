@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Fake journalctl: one line naming the arguments.
+echo "fake journal: $*"

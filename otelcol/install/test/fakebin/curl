@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Records curl's arguments, then runs the real curl (REAL_CURL).
+set -euo pipefail
+printf '%s\n' "$*" >>"$FAKE_LOG/curl.log"
+exec "$REAL_CURL" "$@"

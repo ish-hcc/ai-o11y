@@ -3,7 +3,8 @@
 #
 #   make build      ocb build into _build/aio11y-otelcol (static, linux/amd64)
 #   make components list the components the build holds
-#   make test       test ai-o11y's own components (receiver/)
+#   make test       test ai-o11y's own components (receiver/) and the VM
+#                   install scripts (install/test/run.sh)
 #   make validate   render the collector configuration of a sample target and
 #                   run `aio11y-otelcol validate` on it
 #   make clean
@@ -35,9 +36,10 @@ components: $(BIN)
 validate: $(BIN)
 	cd .. && AIO11Y_OTELCOL_BIN=$(CURDIR)/$(BIN) go test -count=1 -run TestRenderedConfigValidates ./internal/monitoring/collector/
 
-# Tests every module of ai-o11y's own components.
+# Tests every module of ai-o11y's own components, then the VM install scripts.
 test:
 	for mod in $$(find receiver -name go.mod | sort); do (cd $$(dirname $$mod) && go test ./...); done
+	install/test/run.sh
 
 clean:
 	rm -rf _build _tools

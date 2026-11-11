@@ -1,0 +1,28 @@
+[Unit]
+Description=ai-o11y collector (OpenTelemetry Collector)
+Documentation=https://github.com/cloud-barista/ai-o11y/tree/main/otelcol/install
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Runs as root: the GPU receivers run nvidia-smi and amd-smi (amd-smi opens
+# /dev/kfd), XID counting reads /dev/kmsg, and the process scraper reads every
+# process under /proc.
+User=root
+# The write account's password, AIO11Y_WRITE_PASSWORD. Optional: a backend
+# without basic auth needs none.
+EnvironmentFile=-/etc/aio11y-otelcol/env
+ExecStart=/usr/local/bin/aio11y-otelcol --config /etc/aio11y-otelcol/config.yaml
+Restart=on-failure
+RestartSec=5s
+# /var/lib/aio11y-otelcol, where the exporters keep their disk queue.
+StateDirectory=aio11y-otelcol
+StateDirectoryMode=0700
+# A collector stuck on a backlog must not take the workload's memory.
+MemoryMax=512M
+NoNewPrivileges=yes
+ProtectSystem=full
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

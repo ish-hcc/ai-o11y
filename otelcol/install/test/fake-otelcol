@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Fake aio11y-otelcol: `validate --config <file>` fails when the file holds
+# INVALID. FAKE_BUILD names the build, so a test can tell which binary is
+# installed.
+set -euo pipefail
+# build: FAKE_BUILD
+[[ ${1:-} == validate && ${2:-} == --config ]] || { echo "fake-otelcol: unexpected $*" >&2; exit 2; }
+echo "validate $3" >>"$FAKE_LOG/otelcol.log"
+! grep -q INVALID "$3"

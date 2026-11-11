@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Fake systemctl: records its arguments; is-active answers FAKE_ACTIVE (default
+# active).
+set -euo pipefail
+echo "$*" >>"$FAKE_LOG/systemctl.log"
+if [[ ${1:-} == is-active ]]; then
+  [[ ${FAKE_ACTIVE:-active} == active ]]
+fi
