@@ -167,16 +167,29 @@ type node struct {
 		Region string `json:"region"`
 		Zone   string `json:"zone"`
 	} `json:"region"`
-	Spec struct {
-		AcceleratorType  string `json:"acceleratorType"`
-		AcceleratorModel string `json:"acceleratorModel"`
-		AcceleratorCount int    `json:"acceleratorCount"`
-	} `json:"spec"`
-	Image struct {
+	SpecID string      `json:"specId"`
+	Spec   accelerator `json:"spec"`
+	Image  struct {
 		OSType         string `json:"osType"`
 		OSDistribution string `json:"osDistribution"`
 	} `json:"image"`
 }
+
+// accelerator is the part of a CB-Tumblebug spec (model.SpecInfo) monitoring
+// reads. A node carries it under "spec", but CB-Tumblebug (v0.13.8) builds that
+// from a node group summary without the accelerator fields, so a node's spec
+// is usually empty here and the spec itself has to be read by the node's
+// specId. acceleratorCount is null for some specs, such as Azure
+// Standard_NV4ads_V710_v5, and then decodes to 0.
+type accelerator struct {
+	AcceleratorType  string `json:"acceleratorType"`
+	AcceleratorModel string `json:"acceleratorModel"`
+	AcceleratorCount int    `json:"acceleratorCount"`
+}
+
+// specNamespace is the namespace CB-Tumblebug keeps the specs of every CSP in
+// (model.SystemCommonNs); a node's specId names a spec there.
+const specNamespace = "system"
 
 // listNamespaces returns every namespace (GET /ns).
 func (c *Client) listNamespaces(ctx context.Context) ([]namespace, error) {
@@ -207,6 +220,15 @@ func (c *Client) getNode(ctx context.Context, nsID, infraID, nodeID string) (nod
 	var out node
 	path := fmt.Sprintf("/ns/%s/infra/%s/node/%s",
 		url.PathEscape(nsID), url.PathEscape(infraID), url.PathEscape(nodeID))
+	err := c.get(ctx, path, nil, &out)
+	return out, err
+}
+
+// getSpec returns the accelerator of a spec
+// (GET /ns/system/resources/spec/{specId}).
+func (c *Client) getSpec(ctx context.Context, specID string) (accelerator, error) {
+	var out accelerator
+	path := fmt.Sprintf("/ns/%s/resources/spec/%s", specNamespace, url.PathEscape(specID))
 	err := c.get(ctx, path, nil, &out)
 	return out, err
 }

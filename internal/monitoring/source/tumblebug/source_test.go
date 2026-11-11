@@ -103,6 +103,127 @@ func TestListAllNamespaces(t *testing.T) {
 	}
 }
 
+// specTumblebug lists nodes as CB-Tumblebug v0.13.8 does, with a spec that
+// names no accelerator and a specId, and serves the specs from the system
+// namespace. The bodies are trimmed from real answers for Azure GPU VMs. It
+// counts the requests per path.
+func specTumblebug(t *testing.T) (*httptest.Server, map[string]int) {
+	t.Helper()
+	calls := map[string]int{}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /tumblebug/", func(w http.ResponseWriter, r *http.Request) {
+		calls[r.URL.Path]++
+		switch r.URL.Path {
+		case "/tumblebug/ns/ns01/resources/node":
+			_, _ = w.Write([]byte(`{"node":[
+				{"infraId":"infra01","id":"t4-1","uid":"uid-t4-1","specId":"azure+koreacentral+standard_nc4as_t4_v3",
+				 "spec":{"cspSpecName":"Standard_NC4as_T4_v3","vCPU":4,"memoryGiB":28,"costPerHour":0.647}},
+				{"infraId":"infra01","id":"t4-2","uid":"uid-t4-2","specId":"azure+koreacentral+standard_nc4as_t4_v3",
+				 "spec":{"cspSpecName":"Standard_NC4as_T4_v3","vCPU":4,"memoryGiB":28,"costPerHour":0.647}},
+				{"infraId":"infra02","id":"v710-1","uid":"uid-v710-1","specId":"azure+eastus+standard_nv4ads_v710_v5",
+				 "spec":{"cspSpecName":"Standard_NV4ads_V710_v5","vCPU":4,"memoryGiB":16}},
+				{"infraId":"infra03","id":"broken-1","uid":"uid-broken-1","specId":"azure+eastus+broken",
+				 "spec":{"cspSpecName":"Broken","vCPU":2,"memoryGiB":8}},
+				{"infraId":"infra03","id":"broken-2","uid":"uid-broken-2","specId":"azure+eastus+broken",
+				 "spec":{"cspSpecName":"Broken","vCPU":2,"memoryGiB":8}},
+				{"infraId":"infra04","id":"cpu-1","uid":"uid-cpu-1","specId":"azure+koreacentral+standard_d2s_v5",
+				 "spec":{"cspSpecName":"Standard_D2s_v5","vCPU":2,"memoryGiB":8}},
+				{"infraId":"infra05","id":"inline-1","uid":"uid-inline-1","specId":"aws+ap-northeast-2+g4dn.xlarge",
+				 "spec":{"acceleratorType":"gpu","acceleratorModel":"NVIDIA T4","acceleratorCount":1}}]}`))
+		case "/tumblebug/ns/system/resources/spec/azure+koreacentral+standard_nc4as_t4_v3":
+			_, _ = w.Write([]byte(`{"id":"azure+koreacentral+standard_nc4as_t4_v3","cspSpecName":"Standard_NC4as_T4_v3",
+				"vCPU":4,"memoryGiB":28,"acceleratorType":"gpu","acceleratorModel":"NVIDIA Tesla T4",
+				"acceleratorCount":1,"acceleratorMemoryGB":16}`))
+		case "/tumblebug/ns/system/resources/spec/azure+eastus+standard_nv4ads_v710_v5":
+			_, _ = w.Write([]byte(`{"id":"azure+eastus+standard_nv4ads_v710_v5","cspSpecName":"Standard_NV4ads_V710_v5",
+				"vCPU":4,"memoryGiB":16,"acceleratorType":"gpu","acceleratorModel":"AMD RADEON PRO V710",
+				"acceleratorCount":null,"acceleratorMemoryGB":24}`))
+		case "/tumblebug/ns/system/resources/spec/azure+koreacentral+standard_d2s_v5":
+			_, _ = w.Write([]byte(`{"id":"azure+koreacentral+standard_d2s_v5","cspSpecName":"Standard_D2s_v5",
+				"vCPU":2,"memoryGiB":8,"acceleratorType":"","acceleratorModel":"","acceleratorCount":0}`))
+		case "/tumblebug/ns/ns01/infra/infra02/node/v710-1":
+			_, _ = w.Write([]byte(`{"infraId":"infra02","id":"v710-1","uid":"uid-v710-1",
+				"specId":"azure+eastus+standard_nv4ads_v710_v5",
+				"spec":{"cspSpecName":"Standard_NV4ads_V710_v5","vCPU":4,"memoryGiB":16}}`))
+		case "/tumblebug/ns/ns01/infra/infra03/node/broken-1":
+			_, _ = w.Write([]byte(`{"infraId":"infra03","id":"broken-1","uid":"uid-broken-1","specId":"azure+eastus+broken",
+				"spec":{"cspSpecName":"Broken","vCPU":2,"memoryGiB":8}}`))
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"message":"failed to get spec"}`))
+		}
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv, calls
+}
+
+// TestListReadsGPUFromSpec: a node whose own spec names no accelerator gets
+// its GPUs from the spec its specId names, read once per specId; a spec that
+// cannot be read leaves the node listed without GPUs.
+func TestListReadsGPUFromSpec(t *testing.T) {
+	srv, calls := specTumblebug(t)
+
+	got, err := newTestSource(srv.URL).List(context.Background(), monitoring.Scope{ScopeNamespace: "ns01"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	type gpu struct {
+		count int
+		model string
+	}
+	gotGPU := map[string]gpu{}
+	for _, target := range got {
+		gotGPU[target.EntityID] = gpu{target.GPUCount, target.GPUModel}
+	}
+	wantGPU := map[string]gpu{
+		"uid-t4-1":     {1, "NVIDIA Tesla T4"},
+		"uid-t4-2":     {1, "NVIDIA Tesla T4"},
+		"uid-v710-1":   {0, "AMD RADEON PRO V710"},
+		"uid-broken-1": {},
+		"uid-broken-2": {},
+		"uid-cpu-1":    {},
+		"uid-inline-1": {1, "NVIDIA T4"},
+	}
+	if !reflect.DeepEqual(gotGPU, wantGPU) {
+		t.Errorf("GPUs = %+v, want %+v", gotGPU, wantGPU)
+	}
+	for path, want := range map[string]int{
+		"/tumblebug/ns/system/resources/spec/azure+koreacentral+standard_nc4as_t4_v3": 1,
+		"/tumblebug/ns/system/resources/spec/azure+eastus+standard_nv4ads_v710_v5":    1,
+		"/tumblebug/ns/system/resources/spec/azure+koreacentral+standard_d2s_v5":      1,
+		"/tumblebug/ns/system/resources/spec/azure+eastus+broken":                     1,
+		"/tumblebug/ns/system/resources/spec/aws+ap-northeast-2+g4dn.xlarge":          0,
+	} {
+		if calls[path] != want {
+			t.Errorf("%s called %d times, want %d", path, calls[path], want)
+		}
+	}
+}
+
+// TestFetchReadsGPUFromSpec: Fetch, which registration uses, reads the spec
+// the same way, and registers the node without GPUs when the spec fails.
+func TestFetchReadsGPUFromSpec(t *testing.T) {
+	srv, _ := specTumblebug(t)
+	s := newTestSource(srv.URL)
+
+	got, err := s.Fetch(context.Background(), map[string]string{ExtraNamespace: "ns01", ExtraInfra: "infra02", ExtraNode: "v710-1"})
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	if got.EntityID != "uid-v710-1" || got.GPUCount != 0 || got.GPUModel != "AMD RADEON PRO V710" {
+		t.Errorf("Fetch = %+v, want the V710 model with no count", got)
+	}
+
+	got, err = s.Fetch(context.Background(), map[string]string{ExtraNamespace: "ns01", ExtraInfra: "infra03", ExtraNode: "broken-1"})
+	if err != nil {
+		t.Fatalf("Fetch with a failing spec: %v", err)
+	}
+	if got.EntityID != "uid-broken-1" || got.GPUCount != 0 || got.GPUModel != "" {
+		t.Errorf("Fetch with a failing spec = %+v, want the node without GPUs", got)
+	}
+}
+
 func TestListOneNamespace(t *testing.T) {
 	srv, paths := fakeTumblebug(t)
 

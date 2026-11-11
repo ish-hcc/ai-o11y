@@ -61,6 +61,7 @@ func (s *Source) List(ctx context.Context, scope monitoring.Scope) ([]monitoring
 		return nil, err
 	}
 	var targets []monitoring.Target
+	specs := specCache{}
 	for _, nsID := range namespaces {
 		nodes, err := s.client.listNodes(ctx, nsID)
 		if err != nil {
@@ -73,6 +74,7 @@ func (s *Source) List(ctx context.Context, scope monitoring.Scope) ([]monitoring
 					Err(err).Msg("Skipping CB-Tumblebug node")
 				continue
 			}
+			s.fillGPU(ctx, specs, &t, n)
 			targets = append(targets, t)
 		}
 	}
@@ -128,6 +130,7 @@ func (s *Source) Fetch(ctx context.Context, ref map[string]string) (monitoring.T
 	if err := t.Validate(); err != nil {
 		return monitoring.Target{}, fmt.Errorf("node %s/%s/%s: %w", nsID, infraID, nodeID, err)
 	}
+	s.fillGPU(ctx, specCache{}, &t, n)
 	return t, nil
 }
 
@@ -178,10 +181,7 @@ func toTarget(nsID string, n node) monitoring.Target {
 			ExtraNode:      n.ID,
 		},
 	}
-	if strings.EqualFold(n.Spec.AcceleratorType, "gpu") && n.Spec.AcceleratorCount > 0 {
-		t.GPUCount = n.Spec.AcceleratorCount
-		t.GPUModel = n.Spec.AcceleratorModel
-	}
+	setGPU(&t, n.Spec)
 	for key, value := range map[string]string{
 		ExtraConnection:    n.ConnectionName,
 		ExtraZone:          n.Region.Zone,
@@ -193,6 +193,51 @@ func toTarget(nsID string, n node) monitoring.Target {
 		}
 	}
 	return t
+}
+
+// setGPU copies the GPUs of spec to t when spec says its accelerator is a GPU.
+// The model is kept even when the count is not known (0): it alone names the
+// vendor, which is what chooses a GPU receiver.
+func setGPU(t *monitoring.Target, spec accelerator) {
+	if !strings.EqualFold(spec.AcceleratorType, "gpu") {
+		return
+	}
+	t.GPUCount = max(spec.AcceleratorCount, 0)
+	t.GPUModel = spec.AcceleratorModel
+}
+
+// specCache holds the specs read during one List or Fetch, by specId, so that
+// nodes of the same spec cost one request. A failed read is held too, as the
+// zero accelerator, and not retried within the call.
+type specCache map[string]accelerator
+
+// fillGPU reads the GPUs of node n from its spec when the node's own spec
+// does not name an accelerator, which is how CB-Tumblebug (v0.13.8) lists
+// nodes (see accelerator).
+//
+// A spec that cannot be read leaves t without GPUs and is logged; it does not
+// fail the listing or the registration. The GPU fields only add a GPU
+// receiver to the target's collector configuration: without them the target
+// is still monitored with host metrics, and the next sync, which replaces the
+// target's description with what CB-Tumblebug lists, fills them in once the
+// spec answers. Failing instead would keep the whole namespace, or the node
+// being registered, out of monitoring over a detail.
+func (s *Source) fillGPU(ctx context.Context, specs specCache, t *monitoring.Target, n node) {
+	if n.Spec.AcceleratorType != "" || n.SpecID == "" {
+		return
+	}
+	spec, ok := specs[n.SpecID]
+	if !ok {
+		var err error
+		spec, err = s.client.getSpec(ctx, n.SpecID)
+		if err != nil {
+			log.Warn().Str("specId", n.SpecID).Str("infraId", n.InfraID).Str("nodeId", n.ID).Err(err).
+				Msg("Failed to read the CB-Tumblebug spec of a node; listing it without GPUs")
+			spec = accelerator{}
+		}
+		specs[n.SpecID] = spec
+	}
+	setGPU(t, spec)
 }
 
 // osFamily reduces the image of a node to a family. NodeInfo.image carries no

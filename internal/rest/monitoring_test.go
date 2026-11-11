@@ -98,7 +98,7 @@ func newTestServer(t *testing.T, deps Deps) *Server {
 		t.Fatalf("catalog: %v", err)
 	}
 	deps.Catalog = cat
-	deps.Collectors = []monitoring.CollectorKind{collector.Hostmetrics{}, collector.NvidiaGPU{}}
+	deps.Collectors = []monitoring.CollectorKind{collector.Hostmetrics{}, collector.NvidiaGPU{}, collector.AMDGPU{}}
 	return NewServer(&config.Config{Server: config.ServerConfig{Port: 8094}}, deps)
 }
 
@@ -296,6 +296,20 @@ func TestTargetMetrics(t *testing.T) {
 	store.targets["k5"] = gpu
 	if m := status("k5")["hw.gpu.utilization"]; !m.Supported {
 		t.Errorf("nvidia gpu = %+v", m)
+	}
+	// CB-Tumblebug names the model of Azure Standard_NV4ads_V710_v5 but not
+	// the count: the model alone makes the AMD collector run.
+	amd := monitoring.Target{EntityID: "k6", Kind: "vm", OS: "linux", GPUModel: "AMD RADEON PRO V710"}
+	store.targets["k6"] = amd
+	amdStatus := status("k6")
+	if m := amdStatus["temperature.edge"]; !m.Supported {
+		t.Errorf("amd gpu with no count, amd-smi field = %+v, want supported", m)
+	}
+	if m := amdStatus["hw.gpu.utilization"]; m.Supported || m.Reason != "The collector for the target's GPU does not provide it" {
+		t.Errorf("amd gpu with no count, nvidia-only field = %+v", m)
+	}
+	if m := status("k1")["hw.gpu.utilization"]; m.Supported || m.Reason != "No collector running on this target provides it" {
+		t.Errorf("gpu field on a vm without a gpu = %+v", m)
 	}
 	if code, _ := call(t, s, http.MethodGet, "/targets/nope/metrics", ""); code != http.StatusNotFound {
 		t.Errorf("unknown target = %d", code)

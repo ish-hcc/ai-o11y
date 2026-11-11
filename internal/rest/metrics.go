@@ -73,9 +73,16 @@ func (h *handler) RestGetTargetMetrics(c echo.Context) error {
 		}
 	}
 	rows := h.Catalog.Rows()
+	gpuRead := false
+	for _, r := range rows {
+		if r.Area == "gpu" && providedOn(r, running) {
+			gpuRead = true
+			break
+		}
+	}
 	resp := model.TargetMetricListResp{TargetID: t.EntityID, Metrics: make([]model.TargetMetricInfo, 0, len(rows))}
 	for _, r := range rows {
-		reason := unsupported(r, t, running)
+		reason := unsupported(r, t, running, gpuRead)
 		resp.Metrics = append(resp.Metrics, model.TargetMetricInfo{
 			Name: r.Name, Schema: r.Schema, Area: r.Area, Unit: r.Unit,
 			Attribute: attributeInfo(r), Dimension: r.DimensionName,
@@ -87,21 +94,20 @@ func (h *handler) RestGetTargetMetrics(c echo.Context) error {
 
 // unsupported says why target t does not have the field of row, or "" when it
 // does: no collector provides it yet, none of the collectors provide it on t,
-// or t lacks what it requires.
-func unsupported(r monitoring.MetricRow, t monitoring.Target, running map[string]bool) string {
+// or t lacks what it requires. gpuRead says a collector reads some GPU field
+// on t. A GPU is known by its count or by its model alone, as the collectors
+// decide (CB-Tumblebug leaves the count of some specs out).
+func unsupported(r monitoring.MetricRow, t monitoring.Target, running map[string]bool, gpuRead bool) string {
 	if r.Gap != "" {
 		return r.Gap
 	}
-	provided := false
-	for collector := range r.Exprs {
-		if running[collector] {
-			provided = true
-			break
-		}
-	}
-	if !provided {
-		if r.Area == "gpu" && t.GPUCount > 0 {
-			return "The target's GPU model does not name NVIDIA, the only GPU vendor read yet"
+	if !providedOn(r, running) {
+		hasGPU := t.GPUCount > 0 || t.GPUModel != ""
+		switch {
+		case r.Area == "gpu" && hasGPU && !gpuRead:
+			return "The target's GPU model names neither NVIDIA nor AMD, the only GPU vendors read yet"
+		case r.Area == "gpu" && hasGPU:
+			return "The collector for the target's GPU does not provide it"
 		}
 		return "No collector running on this target provides it"
 	}
@@ -117,6 +123,16 @@ func unsupported(r monitoring.MetricRow, t monitoring.Target, running map[string
 		}
 	}
 	return ""
+}
+
+// providedOn reports whether one of the running collectors provides row r.
+func providedOn(r monitoring.MetricRow, running map[string]bool) bool {
+	for collector := range r.Exprs {
+		if running[collector] {
+			return true
+		}
+	}
+	return false
 }
 
 // RestPostQuery godoc

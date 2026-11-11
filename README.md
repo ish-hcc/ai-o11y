@@ -89,7 +89,11 @@ All routes are under `/aio11y` and, when `AIO11Y_AUTH_TOKEN` is set, need
   `hw.power` have one expression per field, NVIDIA's. `amd-smi` needs root
   (`/dev/kfd`), and an SR-IOV virtual function such as the Radeon PRO V710 on
   Azure reports little more than VRAM use. A target's metric listing cannot
-  tell which fields its particular GPU leaves empty.
+  tell which fields its particular GPU leaves empty. The GPU model and count
+  come from the node's CB-Tumblebug spec; where the spec has no count (Azure
+  Standard_NV4ads_V710_v5), the target's `gpuCount` stays 0 and the model alone
+  chooses the GPU receiver. A spec CB-Tumblebug cannot answer for leaves the
+  target without GPUs until a later sync reads it.
 - **Registration**: the body of `POST /targets` is ai-app's, named in
   CB-Tumblebug's terms (`nsId`, `infraId`, `nodeId`); another management
   platform needs it reworked.

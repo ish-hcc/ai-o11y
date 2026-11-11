@@ -30,7 +30,7 @@ func (AMDGPU) Path() monitoring.Path { return monitoring.PathAgent }
 // AMD GPUs on. CB-Tumblebug names the vendor in the model ("AMD RADEON PRO
 // V710", "AMD MI300X"), or at least the product line ("AMD INSTINCT").
 func (AMDGPU) AppliesTo(t monitoring.Target) bool {
-	if t.Kind != "vm" || t.GPUCount <= 0 {
+	if t.Kind != "vm" || !hasGPU(t) {
 		return false
 	}
 	model := strings.ToLower(t.GPUModel)

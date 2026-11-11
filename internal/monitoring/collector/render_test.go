@@ -250,6 +250,7 @@ func TestNvidiaGPUAppliesTo(t *testing.T) {
 	}{
 		"no gpu":        {0, "", false},
 		"nvidia":        {1, "NVIDIA T4", true},
+		"count unknown": {0, "NVIDIA Tesla T4", true},
 		"model unknown": {1, "", false},
 		"tumblebug id":  {1, "nvidia-a100-80gb", true},
 		"amd":           {1, "AMD Instinct MI300X", false},
@@ -286,7 +287,8 @@ func TestAMDGPUAppliesTo(t *testing.T) {
 		model string
 		want  bool
 	}{
-		"no gpu":        {"vm", 0, "AMD RADEON PRO V710", false},
+		"no gpu":        {"vm", 0, "", false},
+		"count unknown": {"vm", 0, "AMD RADEON PRO V710", true},
 		"radeon":        {"vm", 1, "AMD RADEON PRO V710", true},
 		"instinct":      {"vm", 1, "AMD INSTINCT", true},
 		"mi300x":        {"vm", 8, "AMD MI300X", true},
