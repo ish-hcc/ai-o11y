@@ -80,6 +80,9 @@ All routes are under `/aio11y` and, when `AIO11Y_AUTH_TOKEN` is set, need
   (Prometheus without an out-of-order window) may refuse it. The collector
   refuses new samples while it uses more than 300 MiB of memory (memory
   limiter at 400 MiB with 100 MiB headroom).
+- **Processes**: per-process fields cover only the 10 processes using the
+  most CPU and the 10 using the most memory in each collection, added up by
+  executable name.
 - **GPU**: NVIDIA GPUs are read with `nvidia-smi` and AMD GPUs with `amd-smi`;
   other vendors are not read. MIG and XID fields wait for an NVML source. AMD
   GPUs give only amd-smi's own fields yet: the common `hw.gpu.*` fields and

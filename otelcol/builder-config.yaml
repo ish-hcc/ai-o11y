@@ -17,6 +17,7 @@ processors:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.164.1
   - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.164.0
   - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.164.0
+  - gomod: github.com/cloud-barista/ai-o11y/otelcol/processor/topprocessprocessor v0.0.0
 exporters:
   - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.164.0
 connectors:
@@ -29,3 +30,4 @@ extensions:
 replaces:
   - github.com/cloud-barista/ai-o11y/otelcol/receiver/nvidiagpureceiver => ../receiver/nvidiagpureceiver
   - github.com/cloud-barista/ai-o11y/otelcol/receiver/amdgpureceiver => ../receiver/amdgpureceiver
+  - github.com/cloud-barista/ai-o11y/otelcol/processor/topprocessprocessor => ../processor/topprocessprocessor

@@ -3,7 +3,7 @@
 #
 #   make build      ocb build into _build/aio11y-otelcol (static, linux/amd64)
 #   make components list the components the build holds
-#   make test       test ai-o11y's own components (receiver/) and the VM
+#   make test       test ai-o11y's own components (receiver/, processor/) and the VM
 #                   install scripts (install/test/run.sh)
 #   make validate   render the collector configuration of a sample target and
 #                   run `aio11y-otelcol validate` on it
@@ -24,7 +24,7 @@ $(TOOLS)/builder:
 	mkdir -p $(TOOLS)
 	GOBIN=$(TOOLS) go install go.opentelemetry.io/collector/cmd/builder@$(OCB_VERSION)
 
-$(BIN): builder-config.yaml $(shell find receiver -name "*.go" -o -name go.mod) $(TOOLS)/builder
+$(BIN): builder-config.yaml $(shell find receiver processor -name "*.go" -o -name go.mod) $(TOOLS)/builder
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(TOOLS)/builder --config builder-config.yaml
 	file $(BIN) | grep -q 'statically linked' || { echo "$(BIN) is not statically linked" >&2; exit 1; }
 
@@ -38,7 +38,7 @@ validate: $(BIN)
 
 # Tests every module of ai-o11y's own components, then the VM install scripts.
 test:
-	for mod in $$(find receiver -name go.mod | sort); do (cd $$(dirname $$mod) && go test ./...); done
+	for mod in $$(find receiver processor -name go.mod | sort); do (cd $$(dirname $$mod) && go test ./...); done
 	install/test/run.sh
 
 clean:

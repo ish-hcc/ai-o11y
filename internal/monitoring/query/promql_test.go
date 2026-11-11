@@ -246,7 +246,7 @@ func TestRenderRejects(t *testing.T) {
 	unmapped[0].EntityID = ""
 	for name, q := range map[string]monitoring.QuerySpec{
 		"unknown metric":       {Metric: "system.nope", Targets: targets("a")},
-		"metric with a gap":    {Metric: "process.cpu.utilization", Targets: targets("a")},
+		"metric with a gap":    {Metric: "system.paging.faults", Targets: targets("a")},
 		"no targets":           {Metric: "system.memory.usage"},
 		"unmapped target":      {Metric: "system.memory.usage", Targets: unmapped},
 		"window without range": {Metric: "system.memory.usage", Targets: targets("a"), Window: monitoring.Agg{Fn: monitoring.AggAvg}},

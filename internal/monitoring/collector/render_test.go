@@ -143,6 +143,54 @@ func TestHostmetricsRejectsUnknownMetric(t *testing.T) {
 	}
 }
 
+// The top process processor and the process scraper's mutes come with the
+// process scraper and only with it.
+func TestHostmetricsTopProcess(t *testing.T) {
+	cpu := monitoring.MetricRow{
+		Name: "system.uptime", Area: "system", Unit: "s", Kind: monitoring.KindGauge,
+		Exprs: map[string]string{catalog.CollectorHostmetrics: `max by (entity_id) ({"system.uptime", $sel})`},
+	}
+	proc := monitoring.MetricRow{
+		Name: "process.memory.utilization", Area: "process", Unit: "1", Kind: monitoring.KindGauge,
+		Exprs:     map[string]string{catalog.CollectorHostmetrics: `sum by (entity_id) ({"process.memory.utilization", $sel})`},
+		Dimension: "x", DimensionName: "x", Enables: []string{"process.memory.utilization"},
+	}
+	for name, tc := range map[string]struct {
+		rows        []monitoring.MetricRow
+		withProcess bool
+	}{
+		"no process row": {[]monitoring.MetricRow{cpu}, false},
+		"process row":    {[]monitoring.MetricRow{cpu, proc}, true},
+	} {
+		c, err := catalog.New(tc.rows)
+		if err != nil {
+			t.Fatalf("%s: catalog: %v", name, err)
+		}
+		frag, err := (Hostmetrics{}).Render(vm(), c)
+		if err != nil {
+			t.Fatalf("%s: Render: %v", name, err)
+		}
+		scrapers := frag.Receivers[HostmetricsReceiver].(map[string]any)["scrapers"].(map[string]any)
+		process, hasScraper := scrapers["process"].(map[string]any)
+		top, hasTop := frag.Processors[TopProcessProcessor]
+		if hasScraper != tc.withProcess || hasTop != tc.withProcess {
+			t.Fatalf("%s: process scraper %v, %s %v; want both %v", name, hasScraper, TopProcessProcessor, hasTop, tc.withProcess)
+		}
+		if !tc.withProcess {
+			continue
+		}
+		for _, mute := range processScraperMutes {
+			if process[mute] != true {
+				t.Errorf("%s: %s = %v", name, mute, process[mute])
+			}
+		}
+		want := map[string]any{"top_n": TopProcesses, "by": []string{"cpu", "memory"}}
+		if !reflect.DeepEqual(top, want) {
+			t.Errorf("%s: %s = %v, want %v", name, TopProcessProcessor, top, want)
+		}
+	}
+}
+
 func TestScraperOf(t *testing.T) {
 	for name, want := range map[string]string{
 		"system_cpu_load_average_1m_ratio": "load",

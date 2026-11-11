@@ -1,0 +1,682 @@
+{
+ "resourceMetrics": [
+  {
+   "resource": {},
+   "scopeMetrics": [
+    {
+     "scope": {
+      "name": "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/memoryscraper"
+     },
+     "metrics": [
+      {
+       "name": "system.memory.usage",
+       "unit": "By",
+       "sum": {
+        "aggregationTemporality": 2,
+        "dataPoints": [
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "used"
+            }
+           }
+          ],
+          "timeUnixNano": "1700000000000000000",
+          "asInt": "8589934592"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "resource": {
+    "attributes": [
+     {
+      "key": "process.pid",
+      "value": {
+       "intValue": "101"
+      }
+     },
+     {
+      "key": "process.parent_pid",
+      "value": {
+       "intValue": "1"
+      }
+     },
+     {
+      "key": "process.executable.name",
+      "value": {
+       "stringValue": "postgres"
+      }
+     },
+     {
+      "key": "process.executable.path",
+      "value": {
+       "stringValue": "/usr/bin/postgres"
+      }
+     },
+     {
+      "key": "process.command",
+      "value": {
+       "stringValue": "postgres"
+      }
+     },
+     {
+      "key": "process.owner",
+      "value": {
+       "stringValue": "root"
+      }
+     }
+    ]
+   },
+   "scopeMetrics": [
+    {
+     "scope": {
+      "name": "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/processscraper",
+      "version": "0.164.0"
+     },
+     "metrics": [
+      {
+       "name": "process.cpu.time",
+       "unit": "s",
+       "sum": {
+        "aggregationTemporality": 2,
+        "isMonotonic": true,
+        "dataPoints": [
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "user"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990000000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 80
+         },
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "system"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990000000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 20
+         },
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "wait"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990000000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 0
+         }
+        ]
+       }
+      },
+      {
+       "name": "process.memory.usage",
+       "unit": "By",
+       "sum": {
+        "aggregationTemporality": 2,
+        "dataPoints": [
+         {
+          "startTimeUnixNano": "1699990000000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asInt": "524288000"
+         }
+        ]
+       }
+      },
+      {
+       "name": "process.memory.virtual",
+       "unit": "By",
+       "sum": {
+        "aggregationTemporality": 2,
+        "dataPoints": [
+         {
+          "startTimeUnixNano": "1699990000000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asInt": "2097152000"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "resource": {
+    "attributes": [
+     {
+      "key": "process.pid",
+      "value": {
+       "intValue": "202"
+      }
+     },
+     {
+      "key": "process.parent_pid",
+      "value": {
+       "intValue": "1"
+      }
+     },
+     {
+      "key": "process.executable.name",
+      "value": {
+       "stringValue": "java"
+      }
+     },
+     {
+      "key": "process.executable.path",
+      "value": {
+       "stringValue": "/usr/bin/java"
+      }
+     },
+     {
+      "key": "process.command",
+      "value": {
+       "stringValue": "java"
+      }
+     },
+     {
+      "key": "process.owner",
+      "value": {
+       "stringValue": "root"
+      }
+     }
+    ]
+   },
+   "scopeMetrics": [
+    {
+     "scope": {
+      "name": "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/processscraper",
+      "version": "0.164.0"
+     },
+     "metrics": [
+      {
+       "name": "process.cpu.time",
+       "unit": "s",
+       "sum": {
+        "aggregationTemporality": 2,
+        "isMonotonic": true,
+        "dataPoints": [
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "user"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990100000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 150
+         },
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "system"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990100000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 50
+         },
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "wait"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990100000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 0
+         }
+        ]
+       }
+      },
+      {
+       "name": "process.memory.usage",
+       "unit": "By",
+       "sum": {
+        "aggregationTemporality": 2,
+        "dataPoints": [
+         {
+          "startTimeUnixNano": "1699990100000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asInt": "2147483648"
+         }
+        ]
+       }
+      },
+      {
+       "name": "process.memory.virtual",
+       "unit": "By",
+       "sum": {
+        "aggregationTemporality": 2,
+        "dataPoints": [
+         {
+          "startTimeUnixNano": "1699990100000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asInt": "8589934592"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "resource": {
+    "attributes": [
+     {
+      "key": "process.pid",
+      "value": {
+       "intValue": "303"
+      }
+     },
+     {
+      "key": "process.parent_pid",
+      "value": {
+       "intValue": "1"
+      }
+     },
+     {
+      "key": "process.executable.name",
+      "value": {
+       "stringValue": "sshd"
+      }
+     },
+     {
+      "key": "process.executable.path",
+      "value": {
+       "stringValue": "/usr/bin/sshd"
+      }
+     },
+     {
+      "key": "process.command",
+      "value": {
+       "stringValue": "sshd"
+      }
+     },
+     {
+      "key": "process.owner",
+      "value": {
+       "stringValue": "root"
+      }
+     }
+    ]
+   },
+   "scopeMetrics": [
+    {
+     "scope": {
+      "name": "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/processscraper",
+      "version": "0.164.0"
+     },
+     "metrics": [
+      {
+       "name": "process.cpu.time",
+       "unit": "s",
+       "sum": {
+        "aggregationTemporality": 2,
+        "isMonotonic": true,
+        "dataPoints": [
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "user"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990200000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 0.6
+         },
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "system"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990200000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 0.4
+         },
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "wait"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990200000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 0
+         }
+        ]
+       }
+      },
+      {
+       "name": "process.memory.usage",
+       "unit": "By",
+       "sum": {
+        "aggregationTemporality": 2,
+        "dataPoints": [
+         {
+          "startTimeUnixNano": "1699990200000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asInt": "10485760"
+         }
+        ]
+       }
+      },
+      {
+       "name": "process.memory.virtual",
+       "unit": "By",
+       "sum": {
+        "aggregationTemporality": 2,
+        "dataPoints": [
+         {
+          "startTimeUnixNano": "1699990200000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asInt": "41943040"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "resource": {
+    "attributes": [
+     {
+      "key": "process.pid",
+      "value": {
+       "intValue": "404"
+      }
+     },
+     {
+      "key": "process.parent_pid",
+      "value": {
+       "intValue": "1"
+      }
+     },
+     {
+      "key": "process.executable.name",
+      "value": {
+       "stringValue": "python3"
+      }
+     },
+     {
+      "key": "process.executable.path",
+      "value": {
+       "stringValue": "/usr/bin/python3"
+      }
+     },
+     {
+      "key": "process.command",
+      "value": {
+       "stringValue": "python3"
+      }
+     },
+     {
+      "key": "process.owner",
+      "value": {
+       "stringValue": "root"
+      }
+     }
+    ]
+   },
+   "scopeMetrics": [
+    {
+     "scope": {
+      "name": "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/processscraper",
+      "version": "0.164.0"
+     },
+     "metrics": [
+      {
+       "name": "process.cpu.time",
+       "unit": "s",
+       "sum": {
+        "aggregationTemporality": 2,
+        "isMonotonic": true,
+        "dataPoints": [
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "user"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990300000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 40
+         },
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "system"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990300000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 10
+         },
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "wait"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990300000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 0
+         }
+        ]
+       }
+      },
+      {
+       "name": "process.memory.usage",
+       "unit": "By",
+       "sum": {
+        "aggregationTemporality": 2,
+        "dataPoints": [
+         {
+          "startTimeUnixNano": "1699990300000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asInt": "104857600"
+         }
+        ]
+       }
+      },
+      {
+       "name": "process.memory.virtual",
+       "unit": "By",
+       "sum": {
+        "aggregationTemporality": 2,
+        "dataPoints": [
+         {
+          "startTimeUnixNano": "1699990300000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asInt": "419430400"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "resource": {
+    "attributes": [
+     {
+      "key": "process.pid",
+      "value": {
+       "intValue": "505"
+      }
+     },
+     {
+      "key": "process.parent_pid",
+      "value": {
+       "intValue": "1"
+      }
+     },
+     {
+      "key": "process.executable.name",
+      "value": {
+       "stringValue": "nginx"
+      }
+     },
+     {
+      "key": "process.executable.path",
+      "value": {
+       "stringValue": "/usr/bin/nginx"
+      }
+     },
+     {
+      "key": "process.command",
+      "value": {
+       "stringValue": "nginx"
+      }
+     },
+     {
+      "key": "process.owner",
+      "value": {
+       "stringValue": "root"
+      }
+     }
+    ]
+   },
+   "scopeMetrics": [
+    {
+     "scope": {
+      "name": "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/processscraper",
+      "version": "0.164.0"
+     },
+     "metrics": [
+      {
+       "name": "process.cpu.time",
+       "unit": "s",
+       "sum": {
+        "aggregationTemporality": 2,
+        "isMonotonic": true,
+        "dataPoints": [
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "user"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990400000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 3
+         },
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "system"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990400000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 2
+         },
+         {
+          "attributes": [
+           {
+            "key": "state",
+            "value": {
+             "stringValue": "wait"
+            }
+           }
+          ],
+          "startTimeUnixNano": "1699990400000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asDouble": 0
+         }
+        ]
+       }
+      },
+      {
+       "name": "process.memory.usage",
+       "unit": "By",
+       "sum": {
+        "aggregationTemporality": 2,
+        "dataPoints": [
+         {
+          "startTimeUnixNano": "1699990400000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asInt": "838860800"
+         }
+        ]
+       }
+      },
+      {
+       "name": "process.memory.virtual",
+       "unit": "By",
+       "sum": {
+        "aggregationTemporality": 2,
+        "dataPoints": [
+         {
+          "startTimeUnixNano": "1699990400000000000",
+          "timeUnixNano": "1700000000000000000",
+          "asInt": "3355443200"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

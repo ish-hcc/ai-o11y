@@ -56,6 +56,8 @@ The default is off.
 
 ## Fields
 
+Process fields come from the hostmetrics process scraper, which describes each process on its resource (`process.pid`, `process.executable.name`, ...). The collector sends them only for the busiest processes: its top process processor (`otelcol/processor/topprocessprocessor`) keeps, per collection, the 10 processes that used the most CPU time since the previous collection and the 10 with the most resident memory, and drops the rest. It copies `process.executable.name` and `process.pid` onto every data point it keeps, because Prometheus does not turn resource attributes into series labels (VictoriaMetrics does, and keeps one label per name). The name is what the fields are split by; the pid keeps two processes of the same name apart, which would otherwise write the same series. The fields add up the processes of one name, so `process.cpu.utilization` and `process.memory.utilization` of `postgres` cover every `postgres` process among those sent. A process that is not among the busiest in a collection has no sample for it. hostmetrics divides `process.cpu.utilization` by the host's logical CPUs, as the semantic conventions do, and reports `process.memory.utilization` as a percentage, which the field divides by 100.
+
 GPU fields come from ai-o11y's NVIDIA GPU receiver (`otelcol/receiver/nvidiagpureceiver`), which reads `nvidia-smi` and writes each query field as `nvidia_smi.<field>`, and its AMD GPU receiver (`otelcol/receiver/amdgpureceiver`), which reads `amd-smi metric --json` and writes each value as `amd_smi.<path in the JSON>`. Both put the GPU's `index`, `uuid` and `name` on every point. Within a target GPU fields are split by the GPU's UUID, `hw.id` for common fields and `uuid` for a collector's own.
 
 The AMD GPU receiver writes these, leaving out a value amd-smi gives as `N/A` or in another unit (amd-smi's `MB` is MiB):
@@ -105,8 +107,8 @@ The AMD GPU receiver writes these, leaving out a value amd-smi gives as `N/A` or
 | `system.cpu.load_average.5m` | hostmetrics | {thread} |  |  | yes |
 | `system.cpu.load_average.15m` | hostmetrics | {thread} |  |  | yes |
 | `system.process.count` | common | {process} | `process.state` (running, sleeping, stopped, defunct, blocked, idle) |  | yes |
-| `process.cpu.utilization` | common | 1 |  | `process.executable.name` | no: per-process collection is waiting on how process ids are kept (top-N in the collector or grouping by name) |
-| `process.memory.utilization` | common | 1 |  | `process.executable.name` | no: per-process collection is waiting on how process ids are kept (top-N in the collector or grouping by name) |
+| `process.cpu.utilization` | common | 1 |  | `process.executable.name` | yes |
+| `process.memory.utilization` | common | 1 |  | `process.executable.name` | yes |
 | `hw.gpu.utilization` | common | 1 | `hw.gpu.task` (general, encoder, decoder) | `hw.id` | yes |
 | `hw.gpu.memory.usage` | common | By |  | `hw.id` | yes |
 | `hw.gpu.memory.limit` | common | By |  | `hw.id` | yes |

@@ -29,6 +29,27 @@ var ErrHealthUnsupported = errors.New("collector health is not reported yet")
 // collector release in use renamed "hostmetrics" to "host_metrics".
 const HostmetricsReceiver = "host_metrics"
 
+// TopProcessProcessor is the processor id of ai-o11y's top process processor
+// (otelcol/processor/topprocessprocessor). It keeps the per-process metrics of
+// the TopProcesses processes using the most CPU and of the TopProcesses using
+// the most memory, and copies process.executable.name and process.pid onto
+// their data points so every backend labels the series with them.
+const TopProcessProcessor = "top_process"
+
+// TopProcesses is how many processes each of CPU and memory keeps.
+const TopProcesses = 10
+
+// processScraperMutes are the process scraper's errors for processes it
+// cannot read, such as one that exits during the scrape or, without root,
+// another user's. They are expected on every scrape and would fill the log.
+var processScraperMutes = []string{
+	"mute_process_name_error",
+	"mute_process_exe_error",
+	"mute_process_io_error",
+	"mute_process_user_error",
+	"mute_process_cgroup_error",
+}
+
 // scraperPrefixes maps a hostmetrics metric name prefix to the scraper that
 // emits it. Longer prefixes come first so system_cpu_load_average resolves to
 // load, not cpu. Prefixes are written with underscores because the dotted
@@ -113,7 +134,10 @@ func (Hostmetrics) AppliesTo(t monitoring.Target) bool { return t.Kind == "vm" }
 
 // Render implements monitoring.CollectorKind. Rows with a gap are skipped. An
 // expression or enabled metric no scraper is known to emit is an error, so a
-// new catalog row cannot silently collect nothing.
+// new catalog row cannot silently collect nothing. When a row needs the
+// process scraper, its per-process read errors are muted and the top process
+// processor (TopProcessProcessor) is rendered, so only the busiest processes
+// are sent.
 func (h Hostmetrics) Render(t monitoring.Target, c monitoring.MetricCatalog) (monitoring.ConfigFragment, error) {
 	interval := h.Interval
 	if interval <= 0 {
@@ -168,6 +192,17 @@ func (h Hostmetrics) Render(t monitoring.Target, c monitoring.MetricCatalog) (mo
 		return monitoring.ConfigFragment{}, errors.New("catalog has no hostmetrics expression")
 	}
 
+	var processors map[string]any
+	if process, ok := scrapers["process"]; ok {
+		for _, mute := range processScraperMutes {
+			process[mute] = true
+		}
+		processors = map[string]any{TopProcessProcessor: map[string]any{
+			"top_n": TopProcesses,
+			"by":    []string{"cpu", "memory"},
+		}}
+	}
+
 	scraperCfg := make(map[string]any, len(scrapers))
 	for name, cfg := range scrapers {
 		scraperCfg[name] = cfg
@@ -179,6 +214,7 @@ func (h Hostmetrics) Render(t monitoring.Target, c monitoring.MetricCatalog) (mo
 				"scrapers":            scraperCfg,
 			},
 		},
+		Processors: processors,
 	}, nil
 }
 

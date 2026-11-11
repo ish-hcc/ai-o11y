@@ -115,7 +115,9 @@ func Render(t monitoring.Target, kinds []monitoring.CollectorKind, c monitoring.
 	// other processor holds them. The identity processor runs after every
 	// other processor that may change data points, so none can change the
 	// label it stamps; batch only groups them and goes last, as the collector
-	// documentation recommends.
+	// documentation recommends. A processor that compares the data points of
+	// one collection, such as the top process processor, so sees one
+	// collection at a time.
 	limiter := map[string]any{
 		"check_interval":  "1s",
 		"limit_mib":       MemoryLimitMiB,

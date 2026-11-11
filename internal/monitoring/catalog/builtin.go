@@ -310,9 +310,14 @@ func systemRows() []monitoring.MetricRow {
 	}
 }
 
+// processRows are the system's process count and the per-process fields. The
+// collector sends per-process series only for the processes using the most
+// CPU or memory (the top_process processor), with process.executable.name and
+// process.pid on every point; the fields add up the processes of one name.
 func processRows() []monitoring.MetricRow {
 	pstate := "process.state"
-	const gap = "per-process collection is waiting on how process ids are kept (top-N in the collector or grouping by name)"
+	const name = "process.executable.name"
+	perName := func(metric string) string { return `sum by (` + by(name) + `) (` + series(metric) + `)` }
 	return []monitoring.MetricRow{
 		{
 			Name: "system.process.count", Area: "process", Unit: "{process}", Kind: monitoring.KindGauge,
@@ -326,10 +331,22 @@ func processRows() []monitoring.MetricRow {
 			// hostmetrics leaves a status with no processes out.
 			ZeroFill: hmReporting,
 		},
-		{Name: "process.cpu.utilization", Area: "process", Unit: "1", Kind: monitoring.KindRate,
-			Description: "CPU use of a process, one core = 1.", Dimension: "process", DimensionName: "process.executable.name", Gap: gap},
-		{Name: "process.memory.utilization", Area: "process", Unit: "1", Kind: monitoring.KindGauge,
-			Description: "Memory share of a process.", Dimension: "process", DimensionName: "process.executable.name", Gap: gap},
+		{
+			Name: "process.cpu.utilization", Area: "process", Unit: "1", Kind: monitoring.KindGauge,
+			Description: "Share of the time of all CPUs the processes of one name used since the previous collection, all CPU states. Only the processes using the most CPU or memory are collected.",
+			// hostmetrics divides by the host's logical CPUs and splits it by state.
+			Exprs:     hm(perName("process.cpu.utilization")),
+			Dimension: name, DimensionName: name,
+			Enables: []string{"process.cpu.utilization"},
+		},
+		{
+			Name: "process.memory.utilization", Area: "process", Unit: "1", Kind: monitoring.KindGauge,
+			Description: "Share of the physical memory the processes of one name hold resident. Only the processes using the most CPU or memory are collected.",
+			// hostmetrics reports a percentage (gopsutil MemoryPercent) under unit 1.
+			Exprs:     hm(perName("process.memory.utilization") + " / 100"),
+			Dimension: name, DimensionName: name,
+			Enables: []string{"process.memory.utilization"},
+		},
 	}
 }
 
