@@ -21,6 +21,10 @@ const waitDelay = 5 * time.Second
 // identityFields are read with every sample and become attributes.
 var identityFields = []string{"index", "uuid", "name"}
 
+// busIDField is read with every sample to find a GPU by its PCI address, which
+// XID lines name it by. It is not an attribute.
+const busIDField = "pci.bus_id"
+
 // runFunc runs nvidia-smi with args and returns its standard output.
 type runFunc func(ctx context.Context, path string, args ...string) ([]byte, error)
 
@@ -104,7 +108,7 @@ func (s *nvidiaSMI) Read(ctx context.Context) ([]GPU, error) {
 	if err != nil {
 		return nil, err
 	}
-	all := append(slices.Clone(identityFields), fields...)
+	all := append(append(slices.Clone(identityFields), busIDField), fields...)
 	out, err := s.run(ctx, s.path, "--query-gpu="+strings.Join(all, ","), "--format=csv,nounits")
 	if err != nil {
 		return nil, err
@@ -147,6 +151,10 @@ func parseQuery(out []byte, fields []string) ([]GPU, error) {
 			cell := strings.TrimSpace(row[i])
 			if slices.Contains(identityFields, f) {
 				g.Attributes[f] = cell
+				continue
+			}
+			if f == busIDField {
+				g.PCIBusID = cell
 				continue
 			}
 			if v, ok := parseValue(cell); ok {

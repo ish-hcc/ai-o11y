@@ -69,6 +69,8 @@ receivers:
     nvidia_gpu:
         collection_interval: 30s
         source: nvidia_smi
+        xid:
+            enabled: true
 service:
     extensions:
         - file_storage/queue

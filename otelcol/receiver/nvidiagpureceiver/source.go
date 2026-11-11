@@ -13,7 +13,10 @@ type Source interface {
 type GPU struct {
 	// Attributes identify the GPU, such as index, uuid and name.
 	Attributes map[string]string
-	Values     []Value
+	// PCIBusID is the GPU's PCI address as the source writes it, such as
+	// 00000001:00:00.0, empty when unknown.
+	PCIBusID string
+	Values   []Value
 }
 
 // Value is one field of a GPU's sample, under the source's own field name.

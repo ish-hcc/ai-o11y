@@ -25,6 +25,12 @@ const (
 	CollectorNVML = "nvml"
 )
 
+// SchemaNvidiaKmsg names the fields the nvidia_gpu receiver counts from the
+// kernel log (/dev/kmsg) rather than reads from nvidia-smi; it writes them as
+// nvidia_kmsg.<field>. Their expressions are the nvidia_smi collector's, the
+// receiver that writes them.
+const SchemaNvidiaKmsg = "nvidia_kmsg"
+
 // Capabilities a row can require.
 const (
 	RequiresLinux = "os:linux"
@@ -461,13 +467,21 @@ func gpuRows() []monitoring.MetricRow {
 		})
 	}
 
+	// XID errors the receiver counts from the kernel log: a cumulative count
+	// per GPU and XID number since boot, summed over the XID numbers.
+	rows = append(rows, monitoring.MetricRow{
+		Name: "xid.errors", Schema: SchemaNvidiaKmsg, Area: "gpu", Unit: "{error}", Kind: monitoring.KindGauge,
+		Description: "XID errors the NVIDIA driver logged to the kernel log since boot, all XID numbers together, " +
+			"as far back as the kernel's log buffer holds. A GPU with none has no series.",
+		Exprs:     smi(`sum by (entity_id, uuid) (` + series(SchemaNvidiaKmsg+".xid.errors") + `)`),
+		Dimension: dim, DimensionName: dim,
+	})
+
 	// NVIDIA fields only NVML gives; the receiver has no NVML source yet.
 	const nvml = "the GPU receiver has no NVML source yet; nvidia-smi does not report it"
 	rows = append(rows,
 		monitoring.MetricRow{Name: "mig.sm.utilization", Schema: CollectorNVML, Area: "gpu", Unit: "1",
 			Kind: monitoring.KindGauge, Description: "SM activity of a MIG instance.", Gap: nvml},
-		monitoring.MetricRow{Name: "xid.errors", Schema: CollectorNVML, Area: "gpu", Unit: "{error}",
-			Kind: monitoring.KindGauge, Description: "XID errors the driver reported.", Gap: nvml},
 	)
 	return rows
 }

@@ -14,7 +14,8 @@ import (
 const NvidiaGPUReceiver = "nvidia_gpu"
 
 // NvidiaGPU renders the NVIDIA GPU receiver, reading nvidia-smi, for a VM with
-// GPUs.
+// GPUs. It also counts the XID errors the driver logs to the kernel log
+// (/dev/kmsg), which the collector can read since it runs as root.
 type NvidiaGPU struct {
 	Interval time.Duration
 }
@@ -55,6 +56,7 @@ func (g NvidiaGPU) Render(monitoring.Target, monitoring.MetricCatalog) (monitori
 			NvidiaGPUReceiver: map[string]any{
 				"collection_interval": interval.String(),
 				"source":              catalog.CollectorNvidiaSMI,
+				"xid":                 map[string]any{"enabled": true},
 			},
 		},
 	}, nil

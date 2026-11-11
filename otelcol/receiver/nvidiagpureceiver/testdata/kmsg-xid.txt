@@ -1,0 +1,12 @@
+6,1201,5120345,-;nvidia: loading out-of-tree module taints kernel.
+4,1202,5130011,-;NVRM: Xid (PCI:0000:3b:00): 79, pid='<unknown>', name=<unknown>, GPU has fallen off the bus.
+ SUBSYSTEM=pci
+ DEVICE=+pci:0000:3b:00.0
+4,1203,5130020,-;NVRM: GPU 0000:3b:00.0: GPU has fallen off the bus.
+4,1202,5130011,-;NVRM: Xid (PCI:0000:3b:00): 79, pid='<unknown>', name=<unknown>, GPU has fallen off the bus.
+4,1204,6000000,-;NVRM: Xid (PCI:0000:3B:00): 79, pid=1, name=a, GPU has fallen off the bus.
+4,1205,6100000,-;NVRM: Xid (PCI:0001:00:00): 31, pid=1234, name=python3, Ch 00000001, intr 10000000. MMU Fault: ENGINE GRAPHICS GPCCLIENT_T1_0 faulted @ 0x7f12_34560000. Fault is of type FAULT_PDE ACCESS_TYPE_VIRT_READ
+4,1206,6200000,-;NVRM: Xid (0000:86:00): 48, An uncorrectable double bit error (DBE) has been detected on GPU in the framebuffer at partition 6, subpartition 0.
+4,1207,6300000,-;nvidia-nvswitch0: SXid (PCI:0000:05:00.0): 12028, Non-fatal, Link 32 egress non-posted PRIV error
+4,1208,6400000,c;NVRM: Xid (PCI:0000:3b:20): 79, device number past 0x1f
+12,1209,6500000,-;NVRM: Xid (PCI:0001:00:00): 31, pid=1234, name=test, Ch 00000001

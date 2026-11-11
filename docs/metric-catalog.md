@@ -60,6 +60,8 @@ Process fields come from the hostmetrics process scraper, which describes each p
 
 GPU fields come from ai-o11y's NVIDIA GPU receiver (`otelcol/receiver/nvidiagpureceiver`), which reads `nvidia-smi` and writes each query field as `nvidia_smi.<field>`, and its AMD GPU receiver (`otelcol/receiver/amdgpureceiver`), which reads `amd-smi metric --json` and writes each value as `amd_smi.<path in the JSON>`. Both put the GPU's `index`, `uuid` and `name` on every point. Within a target GPU fields are split by the GPU's UUID, `hw.id` for common fields and `uuid` for a collector's own.
 
+The NVIDIA GPU receiver also counts the XID errors the NVIDIA driver logs to the kernel log (`NVRM: Xid (PCI:0000:3b:00): 79, ...`), reading `/dev/kmsg`, as `nvidia_kmsg.xid.errors`: a cumulative count since boot with the XID number in `xid` and the GPU's `uuid`, found by matching the line's PCI address to `nvidia-smi`'s `pci.bus_id`. A line whose address `nvidia-smi` did not name keeps the address as written in `pci.bus_id` instead. The count goes as far back as the kernel's log buffer holds, and a collector that restarts counts the same lines again. `nvidia_kmsg:xid.errors` adds up the XID numbers per GPU; a GPU with no XID has no series rather than 0.
+
 The AMD GPU receiver writes these, leaving out a value amd-smi gives as `N/A` or in another unit (amd-smi's `MB` is MiB):
 
 | Metric | Unit |
@@ -146,8 +148,8 @@ The AMD GPU receiver writes these, leaving out a value amd-smi gives as `N/A` or
 | `ecc.total_correctable_count` | amd_smi | {error} |  | `uuid` | yes |
 | `ecc.total_uncorrectable_count` | amd_smi | {error} |  | `uuid` | yes |
 | `ecc.total_deferred_count` | amd_smi | {error} |  | `uuid` | yes |
+| `xid.errors` | nvidia_kmsg | {error} |  | `uuid` | yes |
 | `mig.sm.utilization` | nvml | 1 |  |  | no: the GPU receiver has no NVML source yet; nvidia-smi does not report it |
-| `xid.errors` | nvml | {error} |  |  | no: the GPU receiver has no NVML source yet; nvidia-smi does not report it |
 
 ## Known limits
 
@@ -156,9 +158,10 @@ The AMD GPU receiver writes these, leaving out a value amd-smi gives as `N/A` or
 - The meaning of a common field follows OpenTelemetry. Where it differs from
   the fields shown by existing screens (for example, CPU user time with or
   without guest time), the difference is not reconciled yet.
-- The NVIDIA GPU receiver has only an `nvidia-smi` source: MIG and XID fields
-  wait for an NVML source. GPUs of vendors other than NVIDIA and AMD are not
-  read.
+- The NVIDIA GPU receiver has only an `nvidia-smi` source: MIG fields wait for
+  an NVML source. XID errors are counted from the kernel log, so XIDs the
+  kernel's log buffer no longer holds are not counted. GPUs of vendors other
+  than NVIDIA and AMD are not read.
 - The common GPU fields (`hw.gpu.*`, `hw.power`) are computed from `nvidia-smi`
   only: a query renders one collector's expression per field, so AMD GPUs give
   their `amd_smi` fields alone until it can combine two.

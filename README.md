@@ -84,8 +84,10 @@ All routes are under `/aio11y` and, when `AIO11Y_AUTH_TOKEN` is set, need
   most CPU and the 10 using the most memory in each collection, added up by
   executable name.
 - **GPU**: NVIDIA GPUs are read with `nvidia-smi` and AMD GPUs with `amd-smi`;
-  other vendors are not read. MIG and XID fields wait for an NVML source. AMD
-  GPUs give only amd-smi's own fields yet: the common `hw.gpu.*` fields and
+  other vendors are not read. MIG fields wait for an NVML source. XID errors
+  are counted from the kernel log (`/dev/kmsg`) since boot, as far back as its
+  buffer holds. AMD GPUs give only amd-smi's own fields yet: the common
+  `hw.gpu.*` fields and
   `hw.power` have one expression per field, NVIDIA's. `amd-smi` needs root
   (`/dev/kfd`), and an SR-IOV virtual function such as the Radeon PRO V710 on
   Azure reports little more than VRAM use. A target's metric listing cannot

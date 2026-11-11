@@ -51,10 +51,14 @@ func TestConfigValidate(t *testing.T) {
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("default config: %v", err)
 	}
+	if cfg.XID.Enabled || cfg.XID.Path != "/dev/kmsg" {
+		t.Errorf("default xid = %+v, want off, reading /dev/kmsg", cfg.XID)
+	}
 	for name, mutate := range map[string]func(*Config){
 		"unknown source": func(c *Config) { c.Source = "nvml" },
 		"no path":        func(c *Config) { c.NvidiaSMI.Path = "" },
 		"no interval":    func(c *Config) { c.CollectionInterval = 0 },
+		"xid no path":    func(c *Config) { c.XID = XIDConfig{Enabled: true} },
 	} {
 		c := createDefaultConfig()
 		mutate(c)
