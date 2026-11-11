@@ -36,7 +36,7 @@ func vm() monitoring.Target {
 }
 
 var (
-	kinds    = []monitoring.CollectorKind{Hostmetrics{}, NvidiaGPU{}}
+	kinds    = []monitoring.CollectorKind{Hostmetrics{}, NvidiaGPU{}, AMDGPU{}}
 	endpoint = []monitoring.Endpoint{{URL: "http://prometheus:9090/api/v1/otlp"}}
 )
 
@@ -205,6 +205,47 @@ func TestNvidiaGPUAppliesTo(t *testing.T) {
 		target := vm()
 		target.GPUCount, target.GPUModel = tc.count, tc.model
 		if got := (NvidiaGPU{}).AppliesTo(target); got != tc.want {
+			t.Errorf("%s: AppliesTo = %v, want %v", name, got, tc.want)
+		}
+	}
+}
+
+func amdGPUVM() monitoring.Target {
+	t := vm()
+	t.GPUCount, t.GPUModel = 1, "AMD RADEON PRO V710"
+	return t
+}
+
+// TestRenderAMDGPUSnapshot is a VM with an AMD GPU: the AMD GPU receiver,
+// not the NVIDIA one, joins hostmetrics.
+func TestRenderAMDGPUSnapshot(t *testing.T) {
+	got, err := Render(amdGPUVM(), kinds, builtin(t), endpoint, Options{})
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	checkGolden(t, "amd-gpu-vm.golden.yaml", got)
+}
+
+func TestAMDGPUAppliesTo(t *testing.T) {
+	for name, tc := range map[string]struct {
+		kind  string
+		count int
+		model string
+		want  bool
+	}{
+		"no gpu":        {"vm", 0, "AMD RADEON PRO V710", false},
+		"radeon":        {"vm", 1, "AMD RADEON PRO V710", true},
+		"instinct":      {"vm", 1, "AMD INSTINCT", true},
+		"mi300x":        {"vm", 8, "AMD MI300X", true},
+		"no vendor":     {"vm", 1, "Radeon Pro V520", true},
+		"product only":  {"vm", 1, "Instinct MI250", true},
+		"nvidia":        {"vm", 1, "NVIDIA T4", false},
+		"model unknown": {"vm", 1, "", false},
+		"not a vm":      {"k8s", 1, "AMD MI300X", false},
+	} {
+		target := vm()
+		target.Kind, target.GPUCount, target.GPUModel = tc.kind, tc.count, tc.model
+		if got := (AMDGPU{}).AppliesTo(target); got != tc.want {
 			t.Errorf("%s: AppliesTo = %v, want %v", name, got, tc.want)
 		}
 	}

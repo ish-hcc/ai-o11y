@@ -1,0 +1,25 @@
+[
+    {
+        "gpu": 0,
+        "power": {
+            "socket_power": {
+                "value": 10,
+                "unit": "W"
+            },
+            "gfx_voltage": {
+                "value": 6,
+                "unit": "mV"
+            },
+            "soc_voltage": {
+                "value": 918,
+                "unit": "mV"
+            },
+            "mem_voltage": {
+                "value": 1250,
+                "unit": "mV"
+            },
+            "power_management": "ENABLED",
+            "throttle_status": "UNTHROTTLED"
+        }
+    }
+]

@@ -17,6 +17,9 @@ const (
 	// CollectorNvidiaSMI is the nvidia_gpu receiver built into the collector,
 	// reading nvidia-smi; it writes nvidia_smi.<query field>.
 	CollectorNvidiaSMI = "nvidia_smi"
+	// CollectorAMDSMI is the amd_gpu receiver built into the collector,
+	// reading amd-smi metric --json; it writes amd_smi.<path in the JSON>.
+	CollectorAMDSMI = "amd_smi"
 	// CollectorNVML is the NVML source the nvidia_gpu receiver does not have
 	// yet; fields only it can give name it.
 	CollectorNVML = "nvml"
@@ -29,8 +32,9 @@ const (
 
 // Builtin returns the catalog rows ai-o11y ships with. Common fields carry
 // the OpenTelemetry semantic conventions' names (v1.45.0) and meaning and say
-// how the collectors (hostmetrics, nvidia-smi) provide them; collector metrics
-// with no counterpart there are fields of that collector's own.
+// how the collectors (hostmetrics, nvidia-smi, amd-smi) provide them;
+// collector metrics with no counterpart there are fields of that collector's
+// own.
 func Builtin() []monitoring.MetricRow {
 	var rows []monitoring.MetricRow
 	rows = append(rows, cpuRows()...)
@@ -333,17 +337,22 @@ func processRows() []monitoring.MetricRow {
 // writes a query field under: nvidia_smi.<field>.
 func nvidiaSMI(field string) string { return CollectorNvidiaSMI + "." + field }
 
+// amdSMI is the series name the amd_gpu receiver's amd-smi source writes a
+// value under: amd_smi.<path in amd-smi metric --json>.
+func amdSMI(path string) string { return CollectorAMDSMI + "." + path }
+
 // smi maps a GPU field to its nvidia-smi expression.
 func smi(expr string) map[string]string { return map[string]string{CollectorNvidiaSMI: expr} }
 
-// perGPU is the value of an nvidia-smi series per GPU.
+// perGPU is the value of a GPU receiver's series per GPU.
 func perGPU(name string) string {
 	return `max by (entity_id, uuid) (` + series(name) + `)`
 }
 
 // gpuRows are the GPU fields. The common ones carry the OpenTelemetry
 // hardware semantic conventions' names (hw.gpu.*, hw.power), split within a
-// target by hw.id, the GPU's UUID; the rest are nvidia-smi's own query fields.
+// target by hw.id, the GPU's UUID; the rest are nvidia-smi's own query fields
+// and amd-smi's own values.
 func gpuRows() []monitoring.MetricRow {
 	const dim, dimName = "uuid", "hw.id"
 	task := "hw.gpu.task"
@@ -408,6 +417,30 @@ func gpuRows() []monitoring.MetricRow {
 		rows = append(rows, monitoring.MetricRow{
 			Name: f.field, Schema: CollectorNvidiaSMI, Area: "gpu", Unit: f.unit, Kind: monitoring.KindGauge,
 			Description: f.desc, Exprs: smi(perGPU(nvidiaSMI(f.field))), Dimension: dim, DimensionName: dim,
+		})
+	}
+
+	// amd-smi's own fields, under their path in amd-smi metric --json.
+	amdOwn := []struct{ field, unit, desc string }{
+		{"usage.umc_activity", "%", "Share of time the memory controller was busy."},
+		{"usage.mm_activity", "%", "Share of time the multimedia engine was busy."},
+		{"temperature.edge", "Cel", "GPU temperature at the edge of the die."},
+		{"temperature.hotspot", "Cel", "Hottest point of the GPU die (junction)."},
+		{"temperature.mem", "Cel", "GPU memory temperature."},
+		{"clock.gfx_0.clk", "MHz", "Clock of the first graphics domain."},
+		{"clock.mem_0.clk", "MHz", "Memory clock."},
+		{"mem_usage.used_gtt", "MiBy", "Host memory mapped for the GPU (GTT) in use."},
+		{"mem_usage.total_gtt", "MiBy", "Size of the host memory the GPU can map (GTT)."},
+		{"energy.total_energy_consumption", "J", "Energy the GPU has used, a counter that only grows until it resets."},
+		{"pcie.replay_count", "", "PCIe packets replayed, a counter."},
+		{"ecc.total_correctable_count", "{error}", "Correctable ECC errors the driver counted."},
+		{"ecc.total_uncorrectable_count", "{error}", "Uncorrectable ECC errors the driver counted."},
+		{"ecc.total_deferred_count", "{error}", "Deferred ECC errors the driver counted."},
+	}
+	for _, f := range amdOwn {
+		rows = append(rows, monitoring.MetricRow{
+			Name: f.field, Schema: CollectorAMDSMI, Area: "gpu", Unit: f.unit, Kind: monitoring.KindGauge,
+			Description: f.desc, Exprs: map[string]string{CollectorAMDSMI: perGPU(amdSMI(f.field))}, Dimension: dim, DimensionName: dim,
 		})
 	}
 

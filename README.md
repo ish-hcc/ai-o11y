@@ -12,7 +12,7 @@ CB-Tumblebug ──(targets)──▶ ai-o11y ──(PromQL)──▶ Thanos / V
                      collector config                  │ OTLP/HTTP
                               ▼                        │
                         VM: aio11y-otelcol ────────────┘
-                        (host metrics, NVIDIA GPUs)
+                        (host metrics, NVIDIA and AMD GPUs)
 ```
 
 ## Layout
@@ -27,7 +27,7 @@ CB-Tumblebug ──(targets)──▶ ai-o11y ──(PromQL)──▶ Thanos / V
 | `internal/monitoring/query` | Renders queries to PromQL and runs them in chunks of targets. |
 | `internal/monitoring/backend` | Prometheus query API client and the Thanos and VictoriaMetrics backends, selected by `AIO11Y_BACKEND`. |
 | `internal/monitoring/collector` | Renders the collector configuration of a target. |
-| `otelcol/` | The collector, built with the OpenTelemetry Collector Builder, and its own components (`otelcol/receiver/nvidiagpureceiver`). Not part of the service's Go module. |
+| `otelcol/` | The collector, built with the OpenTelemetry Collector Builder, and its own components (`otelcol/receiver/nvidiagpureceiver`, `otelcol/receiver/amdgpureceiver`). Not part of the service's Go module. |
 
 ## Build and run
 
@@ -69,9 +69,13 @@ All routes are under `/aio11y` and, when `AIO11Y_AUTH_TOKEN` is set, need
 - **Collector**: the collector's own metrics are off by default
   (`AIO11Y_COLLECTOR_TELEMETRY_PORT=0`) and nothing reads them yet; set a port
   to serve them on localhost.
-- **GPU**: the GPU receiver reads `nvidia-smi` only. MIG and XID fields wait for
-  an NVML source, GPUs of other vendors are not read, and a target's metric
-  listing cannot tell which fields its particular GPU leaves empty.
+- **GPU**: NVIDIA GPUs are read with `nvidia-smi` and AMD GPUs with `amd-smi`;
+  other vendors are not read. MIG and XID fields wait for an NVML source. AMD
+  GPUs give only amd-smi's own fields yet: the common `hw.gpu.*` fields and
+  `hw.power` have one expression per field, NVIDIA's. `amd-smi` needs root
+  (`/dev/kfd`), and an SR-IOV virtual function such as the Radeon PRO V710 on
+  Azure reports little more than VRAM use. A target's metric listing cannot
+  tell which fields its particular GPU leaves empty.
 - **Registration**: the body of `POST /targets` is ai-app's, named in
   CB-Tumblebug's terms (`nsId`, `infraId`, `nodeId`); another management
   platform needs it reworked.

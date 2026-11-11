@@ -1,0 +1,1318 @@
+{
+    "gpu_data": [
+        {
+            "gpu": 0,
+            "usage": {
+                "gfx_activity": {
+                    "value": 0,
+                    "unit": "%"
+                },
+                "umc_activity": {
+                    "value": 0,
+                    "unit": "%"
+                },
+                "mm_activity": "N/A",
+                "vcn_activity": [
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A"
+                ],
+                "jpeg_activity": [
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A"
+                ],
+                "gfx_busy_inst": {
+                    "xcp_0": [
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ]
+                },
+                "jpeg_busy": {
+                    "xcp_0": [
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ]
+                },
+                "vcn_busy": {
+                    "xcp_0": [
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        {
+                            "value": 0,
+                            "unit": "%"
+                        },
+                        "N/A",
+                        "N/A"
+                    ]
+                }
+            },
+            "power": {
+                "socket_power": {
+                    "value": 139,
+                    "unit": "W"
+                },
+                "gfx_voltage": "N/A",
+                "soc_voltage": "N/A",
+                "mem_voltage": "N/A",
+                "throttle_status": "N/A",
+                "power_management": "ENABLED"
+            },
+            "clock": {
+                "gfx_0": {
+                    "clk": {
+                        "value": 132,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 500,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 2100,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "DISABLED",
+                    "deep_sleep": "ENABLED"
+                },
+                "gfx_1": {
+                    "clk": {
+                        "value": 131,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 500,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 2100,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "DISABLED",
+                    "deep_sleep": "ENABLED"
+                },
+                "gfx_2": {
+                    "clk": {
+                        "value": 132,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 500,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 2100,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "DISABLED",
+                    "deep_sleep": "ENABLED"
+                },
+                "gfx_3": {
+                    "clk": {
+                        "value": 132,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 500,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 2100,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "DISABLED",
+                    "deep_sleep": "ENABLED"
+                },
+                "gfx_4": {
+                    "clk": {
+                        "value": 132,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 500,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 2100,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "DISABLED",
+                    "deep_sleep": "ENABLED"
+                },
+                "gfx_5": {
+                    "clk": {
+                        "value": 132,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 500,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 2100,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "DISABLED",
+                    "deep_sleep": "ENABLED"
+                },
+                "gfx_6": {
+                    "clk": {
+                        "value": 132,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 500,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 2100,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "DISABLED",
+                    "deep_sleep": "ENABLED"
+                },
+                "gfx_7": {
+                    "clk": {
+                        "value": 132,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 500,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 2100,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "DISABLED",
+                    "deep_sleep": "ENABLED"
+                },
+                "mem_0": {
+                    "clk": {
+                        "value": 900,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 900,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 1300,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "N/A",
+                    "deep_sleep": "DISABLED"
+                },
+                "vclk_0": {
+                    "clk": {
+                        "value": 29,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 914,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 1333,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "N/A",
+                    "deep_sleep": "ENABLED"
+                },
+                "vclk_1": {
+                    "clk": {
+                        "value": 29,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 914,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 1333,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "N/A",
+                    "deep_sleep": "ENABLED"
+                },
+                "vclk_2": {
+                    "clk": {
+                        "value": 29,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 914,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 1333,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "N/A",
+                    "deep_sleep": "ENABLED"
+                },
+                "vclk_3": {
+                    "clk": {
+                        "value": 29,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 914,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 1333,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "N/A",
+                    "deep_sleep": "ENABLED"
+                },
+                "dclk_0": {
+                    "clk": {
+                        "value": 22,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 711,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 1143,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "N/A",
+                    "deep_sleep": "ENABLED"
+                },
+                "dclk_1": {
+                    "clk": {
+                        "value": 22,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 711,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 1143,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "N/A",
+                    "deep_sleep": "ENABLED"
+                },
+                "dclk_2": {
+                    "clk": {
+                        "value": 22,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 711,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 1143,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "N/A",
+                    "deep_sleep": "ENABLED"
+                },
+                "dclk_3": {
+                    "clk": {
+                        "value": 22,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 711,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 1143,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "N/A",
+                    "deep_sleep": "ENABLED"
+                },
+                "fclk_0": {
+                    "clk": {
+                        "value": 1300,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 1300,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 1800,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "N/A",
+                    "deep_sleep": "DISABLED"
+                },
+                "socclk_0": {
+                    "clk": {
+                        "value": 28,
+                        "unit": "MHz"
+                    },
+                    "min_clk": {
+                        "value": 889,
+                        "unit": "MHz"
+                    },
+                    "max_clk": {
+                        "value": 1143,
+                        "unit": "MHz"
+                    },
+                    "clk_locked": "N/A",
+                    "deep_sleep": "ENABLED"
+                }
+            },
+            "temperature": {
+                "edge": "N/A",
+                "hotspot": {
+                    "value": 41,
+                    "unit": "C"
+                },
+                "mem": {
+                    "value": 36,
+                    "unit": "C"
+                }
+            },
+            "pcie": {
+                "width": 16,
+                "speed": {
+                    "value": 32,
+                    "unit": "GT/s"
+                },
+                "bandwidth": {
+                    "value": 18,
+                    "unit": "Mb/s"
+                },
+                "replay_count": 0,
+                "l0_to_recovery_count": 0,
+                "replay_roll_over_count": 0,
+                "nak_sent_count": 0,
+                "nak_received_count": 0,
+                "current_bandwidth_sent": "N/A",
+                "current_bandwidth_received": "N/A",
+                "max_packet_size": "N/A",
+                "lc_perf_other_end_recovery": "N/A"
+            },
+            "ecc": {
+                "total_correctable_count": 0,
+                "total_uncorrectable_count": 0,
+                "total_deferred_count": 0,
+                "cache_correctable_count": 0,
+                "cache_uncorrectable_count": 0
+            },
+            "ecc_blocks": {
+                "UMC": {
+                    "correctable_count": 0,
+                    "uncorrectable_count": 0,
+                    "deferred_count": 0
+                },
+                "SDMA": {
+                    "correctable_count": 0,
+                    "uncorrectable_count": 0,
+                    "deferred_count": 0
+                },
+                "GFX": {
+                    "correctable_count": 0,
+                    "uncorrectable_count": 0,
+                    "deferred_count": 0
+                },
+                "MMHUB": {
+                    "correctable_count": 0,
+                    "uncorrectable_count": 0,
+                    "deferred_count": 0
+                },
+                "PCIE_BIF": {
+                    "correctable_count": "N/A",
+                    "uncorrectable_count": "N/A",
+                    "deferred_count": "N/A"
+                },
+                "HDP": {
+                    "correctable_count": "N/A",
+                    "uncorrectable_count": "N/A",
+                    "deferred_count": "N/A"
+                },
+                "XGMI_WAFL": {
+                    "correctable_count": 0,
+                    "uncorrectable_count": 0,
+                    "deferred_count": 0
+                }
+            },
+            "fan": {
+                "speed": "N/A",
+                "max": "N/A",
+                "rpm": "N/A",
+                "usage": "N/A"
+            },
+            "voltage_curve": {
+                "point_0_frequency": "N/A",
+                "point_0_voltage": "N/A",
+                "point_1_frequency": "N/A",
+                "point_1_voltage": "N/A",
+                "point_2_frequency": "N/A",
+                "point_2_voltage": "N/A"
+            },
+            "overdrive": "N/A",
+            "mem_overdrive": "N/A",
+            "perf_level": "AMDSMI_DEV_PERF_LEVEL_AUTO",
+            "xgmi_err": "N/A",
+            "voltage": {
+                "vddboard": "N/A"
+            },
+            "energy": {
+                "total_energy_consumption": {
+                    "value": 109243693.399,
+                    "unit": "J"
+                }
+            },
+            "mem_usage": {
+                "total_vram": {
+                    "value": 196592,
+                    "unit": "MB"
+                },
+                "used_vram": {
+                    "value": 283,
+                    "unit": "MB"
+                },
+                "free_vram": {
+                    "value": 196309,
+                    "unit": "MB"
+                },
+                "total_visible_vram": {
+                    "value": 196592,
+                    "unit": "MB"
+                },
+                "used_visible_vram": {
+                    "value": 283,
+                    "unit": "MB"
+                },
+                "free_visible_vram": {
+                    "value": 196309,
+                    "unit": "MB"
+                },
+                "total_gtt": {
+                    "value": 773829,
+                    "unit": "MB"
+                },
+                "used_gtt": {
+                    "value": 24,
+                    "unit": "MB"
+                },
+                "free_gtt": {
+                    "value": 773805,
+                    "unit": "MB"
+                }
+            },
+            "throttle": {
+                "accumulation_counter": 764645901,
+                "prochot_accumulated": 0,
+                "ppt_accumulated": 923418,
+                "socket_thermal_accumulated": 69116,
+                "vr_thermal_accumulated": 0,
+                "hbm_thermal_accumulated": 0,
+                "gfx_clk_below_host_limit_accumulated": "N/A",
+                "gfx_clk_below_host_limit_power_accumulated": {
+                    "xcp_0": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ]
+                },
+                "gfx_clk_below_host_limit_thermal_accumulated": {
+                    "xcp_0": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ]
+                },
+                "total_gfx_clk_below_host_limit_accumulated": {
+                    "xcp_0": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ]
+                },
+                "low_utilization_accumulated": {
+                    "xcp_0": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ]
+                },
+                "prochot_violation_status": "NOT ACTIVE",
+                "ppt_violation_status": "NOT ACTIVE",
+                "socket_thermal_violation_status": "NOT ACTIVE",
+                "vr_thermal_violation_status": "NOT ACTIVE",
+                "hbm_thermal_violation_status": "NOT ACTIVE",
+                "gfx_clk_below_host_limit_violation_status": "N/A",
+                "gfx_clk_below_host_limit_power_violation_status": {
+                    "xcp_0": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ]
+                },
+                "gfx_clk_below_host_limit_thermal_violation_status": {
+                    "xcp_0": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ]
+                },
+                "total_gfx_clk_below_host_limit_violation_status": {
+                    "xcp_0": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ]
+                },
+                "low_utilization_violation_status": {
+                    "xcp_0": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ]
+                },
+                "prochot_violation_activity": {
+                    "value": 0,
+                    "unit": "%"
+                },
+                "ppt_violation_activity": {
+                    "value": 0,
+                    "unit": "%"
+                },
+                "socket_thermal_violation_activity": {
+                    "value": 0,
+                    "unit": "%"
+                },
+                "vr_thermal_violation_activity": {
+                    "value": 0,
+                    "unit": "%"
+                },
+                "hbm_thermal_violation_activity": {
+                    "value": 0,
+                    "unit": "%"
+                },
+                "gfx_clk_below_host_limit_violation_activity": "N/A",
+                "gfx_clk_below_host_limit_power_violation_activity": {
+                    "xcp_0": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ]
+                },
+                "gfx_clk_below_host_limit_thermal_violation_activity": {
+                    "xcp_0": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ]
+                },
+                "total_gfx_clk_below_host_limit_violation_activity": {
+                    "xcp_0": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ]
+                },
+                "low_utilization_violation_activity": {
+                    "xcp_0": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ],
+                    "xcp_1": [
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A",
+                        "N/A"
+                    ]
+                }
+            }
+        },
+        {
+            "gpu": 1,
+            "usage": "N/A",
+            "power": {
+                "socket_power": "N/A",
+                "gfx_voltage": "N/A",
+                "soc_voltage": "N/A",
+                "mem_voltage": "N/A",
+                "throttle_status": "N/A",
+                "power_management": "N/A"
+            },
+            "clock": {
+                "gfx_0": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "gfx_1": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "gfx_2": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "gfx_3": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "gfx_4": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "gfx_5": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "gfx_6": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "gfx_7": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "mem_0": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "vclk_0": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "vclk_1": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "vclk_2": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "vclk_3": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "dclk_0": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "dclk_1": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "dclk_2": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "dclk_3": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "fclk_0": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                },
+                "socclk_0": {
+                    "clk": "N/A",
+                    "min_clk": "N/A",
+                    "max_clk": "N/A",
+                    "clk_locked": "N/A",
+                    "deep_sleep": "N/A"
+                }
+            },
+            "temperature": {
+                "edge": "N/A",
+                "hotspot": "N/A",
+                "mem": "N/A"
+            },
+            "pcie": {
+                "width": "N/A",
+                "speed": "N/A",
+                "bandwidth": "N/A",
+                "replay_count": "N/A",
+                "l0_to_recovery_count": "N/A",
+                "replay_roll_over_count": "N/A",
+                "nak_sent_count": "N/A",
+                "nak_received_count": "N/A",
+                "current_bandwidth_sent": "N/A",
+                "current_bandwidth_received": "N/A",
+                "max_packet_size": "N/A",
+                "lc_perf_other_end_recovery": "N/A"
+            },
+            "ecc": {
+                "total_correctable_count": 0,
+                "total_uncorrectable_count": 0,
+                "total_deferred_count": 0,
+                "cache_correctable_count": "N/A",
+                "cache_uncorrectable_count": "N/A"
+            },
+            "ecc_blocks": "N/A",
+            "fan": {
+                "speed": "N/A",
+                "max": "N/A",
+                "rpm": "N/A",
+                "usage": "N/A"
+            },
+            "voltage_curve": {
+                "point_0_frequency": "N/A",
+                "point_0_voltage": "N/A",
+                "point_1_frequency": "N/A",
+                "point_1_voltage": "N/A",
+                "point_2_frequency": "N/A",
+                "point_2_voltage": "N/A"
+            },
+            "overdrive": "N/A",
+            "mem_overdrive": "N/A",
+            "perf_level": "N/A",
+            "xgmi_err": "N/A",
+            "voltage": {
+                "vddboard": "N/A"
+            },
+            "energy": "N/A",
+            "mem_usage": {
+                "total_vram": {
+                    "value": 98296,
+                    "unit": "MB"
+                },
+                "used_vram": {
+                    "value": 492,
+                    "unit": "MB"
+                },
+                "free_vram": {
+                    "value": 97804,
+                    "unit": "MB"
+                },
+                "total_visible_vram": "N/A",
+                "used_visible_vram": "N/A",
+                "free_visible_vram": "N/A",
+                "total_gtt": "N/A",
+                "used_gtt": "N/A",
+                "free_gtt": "N/A"
+            },
+            "throttle": {
+                "accumulation_counter": "N/A",
+                "prochot_accumulated": "N/A",
+                "ppt_accumulated": "N/A",
+                "socket_thermal_accumulated": "N/A",
+                "vr_thermal_accumulated": "N/A",
+                "hbm_thermal_accumulated": "N/A",
+                "gfx_clk_below_host_limit_accumulated": "N/A",
+                "gfx_clk_below_host_limit_power_accumulated": "N/A",
+                "gfx_clk_below_host_limit_thermal_accumulated": "N/A",
+                "total_gfx_clk_below_host_limit_accumulated": "N/A",
+                "low_utilization_accumulated": "N/A",
+                "prochot_violation_status": "N/A",
+                "ppt_violation_status": "N/A",
+                "socket_thermal_violation_status": "N/A",
+                "vr_thermal_violation_status": "N/A",
+                "hbm_thermal_violation_status": "N/A",
+                "gfx_clk_below_host_limit_violation_status": "N/A",
+                "gfx_clk_below_host_limit_power_violation_status": "N/A",
+                "gfx_clk_below_host_limit_thermal_violation_status": "N/A",
+                "total_gfx_clk_below_host_limit_violation_status": "N/A",
+                "low_utilization_violation_status": "N/A",
+                "prochot_violation_activity": "N/A",
+                "ppt_violation_activity": "N/A",
+                "socket_thermal_violation_activity": "N/A",
+                "vr_thermal_violation_activity": "N/A",
+                "hbm_thermal_violation_activity": "N/A",
+                "gfx_clk_below_host_limit_violation_activity": "N/A",
+                "gfx_clk_below_host_limit_power_violation_activity": "N/A",
+                "gfx_clk_below_host_limit_thermal_violation_activity": "N/A",
+                "total_gfx_clk_below_host_limit_violation_activity": "N/A",
+                "low_utilization_violation_activity": "N/A"
+            }
+        }
+    ]
+}

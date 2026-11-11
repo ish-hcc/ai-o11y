@@ -8,7 +8,7 @@ lists it for one target.
 ## Principles
 
 1. **Collectors keep their own names.** The OpenTelemetry hostmetrics receiver,
-   `nvidia-smi` or NVML write metrics under the names they define. ai-o11y does
+   `nvidia-smi`, `amd-smi` or NVML write metrics under the names they define. ai-o11y does
    not rename them at collection time.
 2. **The catalog maps them to fields.** Each field says, per collector, which
    PromQL computes it from that collector's series.
@@ -56,7 +56,21 @@ The default is off.
 
 ## Fields
 
-GPU fields come from ai-o11y's NVIDIA GPU receiver (`otelcol/receiver/nvidiagpureceiver`), which reads `nvidia-smi` and writes each query field as `nvidia_smi.<field>`. Within a target they are split by the GPU's UUID, `hw.id` for common fields and `uuid` for nvidia-smi's own.
+GPU fields come from ai-o11y's NVIDIA GPU receiver (`otelcol/receiver/nvidiagpureceiver`), which reads `nvidia-smi` and writes each query field as `nvidia_smi.<field>`, and its AMD GPU receiver (`otelcol/receiver/amdgpureceiver`), which reads `amd-smi metric --json` and writes each value as `amd_smi.<path in the JSON>`. Both put the GPU's `index`, `uuid` and `name` on every point. Within a target GPU fields are split by the GPU's UUID, `hw.id` for common fields and `uuid` for a collector's own.
+
+The AMD GPU receiver writes these, leaving out a value amd-smi gives as `N/A` or in another unit (amd-smi's `MB` is MiB):
+
+| Metric | Unit |
+|---|---|
+| `amd_smi.usage.gfx_activity`, `amd_smi.usage.umc_activity`, `amd_smi.usage.mm_activity` | % |
+| `amd_smi.mem_usage.{total,used,free}_vram`, `amd_smi.mem_usage.{total,used,free}_visible_vram`, `amd_smi.mem_usage.{total,used,free}_gtt` | MiBy |
+| `amd_smi.power.socket_power` | W |
+| `amd_smi.power.gfx_voltage`, `amd_smi.power.soc_voltage`, `amd_smi.power.mem_voltage` | mV |
+| `amd_smi.energy.total_energy_consumption` | J |
+| `amd_smi.temperature.edge`, `amd_smi.temperature.hotspot`, `amd_smi.temperature.mem` | Cel |
+| `amd_smi.clock.<domain>.clk`, one per clock domain (`gfx_0`, `mem_0`, `vclk_0`, ...) | MHz |
+| `amd_smi.pcie.width`, `amd_smi.pcie.replay_count` |  |
+| `amd_smi.ecc.total_correctable_count`, `amd_smi.ecc.total_uncorrectable_count`, `amd_smi.ecc.total_deferred_count` |  |
 
 | Field | Schema | Unit | Attribute (values) | Dimension | Provided |
 |---|---|---|---|---|---|
@@ -116,6 +130,20 @@ GPU fields come from ai-o11y's NVIDIA GPU receiver (`otelcol/receiver/nvidiagpur
 | `remapped_rows.uncorrectable` | nvidia_smi | {row} |  | `uuid` | yes |
 | `remapped_rows.pending` | nvidia_smi |  |  | `uuid` | yes |
 | `remapped_rows.failure` | nvidia_smi |  |  | `uuid` | yes |
+| `usage.umc_activity` | amd_smi | % |  | `uuid` | yes |
+| `usage.mm_activity` | amd_smi | % |  | `uuid` | yes |
+| `temperature.edge` | amd_smi | Cel |  | `uuid` | yes |
+| `temperature.hotspot` | amd_smi | Cel |  | `uuid` | yes |
+| `temperature.mem` | amd_smi | Cel |  | `uuid` | yes |
+| `clock.gfx_0.clk` | amd_smi | MHz |  | `uuid` | yes |
+| `clock.mem_0.clk` | amd_smi | MHz |  | `uuid` | yes |
+| `mem_usage.used_gtt` | amd_smi | MiBy |  | `uuid` | yes |
+| `mem_usage.total_gtt` | amd_smi | MiBy |  | `uuid` | yes |
+| `energy.total_energy_consumption` | amd_smi | J |  | `uuid` | yes |
+| `pcie.replay_count` | amd_smi |  |  | `uuid` | yes |
+| `ecc.total_correctable_count` | amd_smi | {error} |  | `uuid` | yes |
+| `ecc.total_uncorrectable_count` | amd_smi | {error} |  | `uuid` | yes |
+| `ecc.total_deferred_count` | amd_smi | {error} |  | `uuid` | yes |
 | `mig.sm.utilization` | nvml | 1 |  |  | no: the GPU receiver has no NVML source yet; nvidia-smi does not report it |
 | `xid.errors` | nvml | {error} |  |  | no: the GPU receiver has no NVML source yet; nvidia-smi does not report it |
 
@@ -126,7 +154,11 @@ GPU fields come from ai-o11y's NVIDIA GPU receiver (`otelcol/receiver/nvidiagpur
 - The meaning of a common field follows OpenTelemetry. Where it differs from
   the fields shown by existing screens (for example, CPU user time with or
   without guest time), the difference is not reconciled yet.
-- The GPU receiver has only an `nvidia-smi` source: MIG and XID fields wait for
-  an NVML source, and GPUs of other vendors are not read.
+- The NVIDIA GPU receiver has only an `nvidia-smi` source: MIG and XID fields
+  wait for an NVML source. GPUs of vendors other than NVIDIA and AMD are not
+  read.
+- The common GPU fields (`hw.gpu.*`, `hw.power`) are computed from `nvidia-smi`
+  only: a query renders one collector's expression per field, so AMD GPUs give
+  their `amd_smi` fields alone until it can combine two.
 - Fields whose value only the existing screens compute, such as average I/O
   wait per operation, are not in the catalog yet.

@@ -12,6 +12,7 @@ dist:
 receivers:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver v0.164.1
   - gomod: github.com/cloud-barista/ai-o11y/otelcol/receiver/nvidiagpureceiver v0.0.0
+  - gomod: github.com/cloud-barista/ai-o11y/otelcol/receiver/amdgpureceiver v0.0.0
 processors:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.164.1
   - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.164.0
@@ -25,3 +26,4 @@ extensions:
 # ai-o11y's own components are built from this directory.
 replaces:
   - github.com/cloud-barista/ai-o11y/otelcol/receiver/nvidiagpureceiver => ../receiver/nvidiagpureceiver
+  - github.com/cloud-barista/ai-o11y/otelcol/receiver/amdgpureceiver => ../receiver/amdgpureceiver
