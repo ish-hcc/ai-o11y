@@ -18,6 +18,34 @@ import (
 // times.
 const BatchProcessor = "batch"
 
+// MemoryLimiterProcessor is the processor that refuses data points while the
+// collector's memory use is over a limit, so a backlog makes it drop samples
+// rather than be killed. It runs first, as the collector documentation
+// recommends.
+const MemoryLimiterProcessor = "memory_limiter"
+
+// MemoryLimitMiB and MemorySpikeLimitMiB are the memory limiter's hard limit
+// and the headroom below it where it starts refusing data. They stay under
+// the MemoryMax=512M of the installed service unit
+// (otelcol/install/aio11y-otelcol.service), so the limiter acts before the
+// kernel kills the collector.
+const (
+	MemoryLimitMiB      = 400
+	MemorySpikeLimitMiB = 100
+)
+
+// ExtensionQueueStorage is the file storage extension the disk queue is kept
+// in.
+const ExtensionQueueStorage = "file_storage/queue"
+
+// DefaultStorageDir is where the disk queue is kept when Options.StorageDir is
+// empty: under the state directory of the installed service unit.
+const DefaultStorageDir = "/var/lib/aio11y-otelcol/queue"
+
+// QueueSizeBytes bounds the disk queue, counted in bytes of encoded data
+// points: while it is full, new data points are dropped.
+const QueueSizeBytes = 256 << 20
+
 // ExporterOTLPHTTP is the exporter id the renderer writes. The collector
 // release in use renamed "otlphttp" to "otlp_http".
 const ExporterOTLPHTTP = "otlp_http"
@@ -36,8 +64,9 @@ const WritePasswordEnv = "AIO11Y_WRITE_PASSWORD"
 
 // Render builds the collector configuration for one target: the fragments of
 // every agent-path kind that applies to it, the processor that stamps its
-// identity labels, and one metrics pipeline to the endpoints: one endpoint as
-// one exporter, several behind a failover connector (see exportTo). Two
+// identity labels, the memory limiter, and one metrics pipeline to the
+// endpoints: one endpoint as one exporter, several behind a failover connector
+// (see exportTo). Two
 // fragments that define the same component id are an error rather than one
 // silently replacing the other. The output is YAML with sorted keys, so the same
 // inputs always render the same bytes.
@@ -82,19 +111,31 @@ func Render(t monitoring.Target, kinds []monitoring.CollectorKind, c monitoring.
 		return nil, err
 	}
 
-	// The identity processor runs after every other processor that may change
-	// data points, so none can change the label it stamps; batch only groups
-	// them and goes last, as the collector documentation recommends.
-	if err := mergeInto(processors, map[string]any{BatchProcessor: map[string]any{}}, "processor"); err != nil {
+	// The memory limiter runs first, so data points are refused before any
+	// other processor holds them. The identity processor runs after every
+	// other processor that may change data points, so none can change the
+	// label it stamps; batch only groups them and goes last, as the collector
+	// documentation recommends.
+	limiter := map[string]any{
+		"check_interval":  "1s",
+		"limit_mib":       MemoryLimitMiB,
+		"spike_limit_mib": MemorySpikeLimitMiB,
+	}
+	if err := mergeInto(processors, map[string]any{MemoryLimiterProcessor: limiter, BatchProcessor: map[string]any{}}, "processor"); err != nil {
 		return nil, err
 	}
 	pipelineProcessors := slices.Sorted(maps.Keys(processors))
 	pipelineProcessors = slices.DeleteFunc(pipelineProcessors, func(p string) bool {
-		return p == monitoring.IdentityProcessor || p == BatchProcessor
+		return p == MemoryLimiterProcessor || p == monitoring.IdentityProcessor || p == BatchProcessor
 	})
+	pipelineProcessors = append([]string{MemoryLimiterProcessor}, pipelineProcessors...)
 	pipelineProcessors = append(pipelineProcessors, monitoring.IdentityProcessor, BatchProcessor)
 
-	out := exportTo(endpoints)
+	storageDir := opts.StorageDir
+	if storageDir == "" {
+		storageDir = DefaultStorageDir
+	}
+	out := exportTo(endpoints, storageDir)
 	pipelines := map[string]any{
 		"metrics": map[string]any{
 			"receivers":  slices.Sorted(maps.Keys(receivers)),
@@ -133,17 +174,21 @@ type output struct {
 	pipelines  map[string]any
 }
 
-// exportTo writes the endpoints. One endpoint is one exporter, with the
-// exporter's own queue and retries. Several are one exporter each, in a
-// pipeline per priority behind the failover connector, as the connector
-// documentation sets them up: the exporters' queues and retries are off, so a
-// failure reaches the connector, which then moves to the next endpoint and
-// goes back to the first once it answers again. While every endpoint fails,
-// nothing is kept.
-func exportTo(endpoints []monitoring.Endpoint) output {
+// exportTo writes the endpoints. One endpoint is one exporter that keeps what
+// it cannot send in the disk queue under storageDir (see keepOnDisk). Several
+// are one exporter each, in a pipeline per priority behind the failover
+// connector, as the connector documentation sets them up: every exporter but
+// the last has its queue and retries off, so a failure reaches the connector,
+// which then moves to the next endpoint and goes back to the first once it
+// answers again. The last keeps what it cannot send on disk, so samples are
+// kept while every endpoint fails.
+func exportTo(endpoints []monitoring.Endpoint, storageDir string) output {
+	queue := map[string]any{"directory": storageDir, "create_directory": true}
 	if len(endpoints) == 1 {
-		out := output{head: ExporterOTLPHTTP, extensions: map[string]any{}}
-		out.exporters = map[string]any{ExporterOTLPHTTP: exporterConfig(endpoints[0], ExtensionBasicAuth, out.extensions)}
+		out := output{head: ExporterOTLPHTTP, extensions: map[string]any{ExtensionQueueStorage: queue}}
+		cfg := exporterConfig(endpoints[0], ExtensionBasicAuth, out.extensions)
+		keepOnDisk(cfg)
+		out.exporters = map[string]any{ExporterOTLPHTTP: cfg}
 		return out
 	}
 	out := output{head: ConnectorFailover, exporters: map[string]any{}, extensions: map[string]any{}, pipelines: map[string]any{}}
@@ -152,8 +197,13 @@ func exportTo(endpoints []monitoring.Endpoint) output {
 		exporter := fmt.Sprintf("%s/%d", ExporterOTLPHTTP, i)
 		pipeline := fmt.Sprintf("metrics/%d", i)
 		cfg := exporterConfig(e, fmt.Sprintf("%s/%d", ExtensionBasicAuth, i), out.extensions)
-		cfg["sending_queue"] = map[string]any{"enabled": false}
-		cfg["retry_on_failure"] = map[string]any{"enabled": false}
+		if i == len(endpoints)-1 {
+			keepOnDisk(cfg)
+			out.extensions[ExtensionQueueStorage] = queue
+		} else {
+			cfg["sending_queue"] = map[string]any{"enabled": false}
+			cfg["retry_on_failure"] = map[string]any{"enabled": false}
+		}
 		out.exporters[exporter] = cfg
 		out.pipelines[pipeline] = map[string]any{
 			"receivers": []string{ConnectorFailover},
@@ -163,6 +213,24 @@ func exportTo(endpoints []monitoring.Endpoint) output {
 	}
 	out.connectors = map[string]any{ConnectorFailover: map[string]any{"priority_levels": levels}}
 	return out
+}
+
+// keepOnDisk makes the exporter cfg queue what it sends in the disk queue
+// (ExtensionQueueStorage) and retry a failed send until it goes through
+// (max_elapsed_time 0), so samples outlive a backend outage and a collector
+// restart, up to QueueSizeBytes. One consumer sends them one request at a
+// time in the order they were queued, so the backend gets each series' samples
+// in time order. Only across a restart they are not: the queue puts the
+// request that was being sent behind the others.
+func keepOnDisk(cfg map[string]any) {
+	cfg["sending_queue"] = map[string]any{
+		"enabled":       true,
+		"storage":       ExtensionQueueStorage,
+		"num_consumers": 1,
+		"sizer":         "bytes",
+		"queue_size":    QueueSizeBytes,
+	}
+	cfg["retry_on_failure"] = map[string]any{"enabled": true, "max_elapsed_time": "0s"}
 }
 
 // exporterConfig is the exporter for e. An account adds a basic auth
@@ -200,6 +268,9 @@ type Options struct {
 	// opens no port another collector on the host may already hold; nothing
 	// reads them yet.
 	TelemetryPort int
+	// StorageDir is the directory on the collector's host its disk queue is
+	// kept in; the collector creates it. Empty is DefaultStorageDir.
+	StorageDir string
 }
 
 // telemetry is the collector's own telemetry section.

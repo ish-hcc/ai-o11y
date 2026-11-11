@@ -27,6 +27,9 @@ type CollectorConfig struct {
 	// TelemetryPort is the localhost port collectors serve their own metrics
 	// on; 0 turns them off.
 	TelemetryPort int
+	// StorageDir is the directory on a collector's host its disk queue is
+	// kept in.
+	StorageDir string
 }
 
 // BackendConfig is the metrics backend. The settings are the same whichever
@@ -126,6 +129,7 @@ func Load() (*Config, error) {
 	v.SetDefault("db.write_timeout", 30*time.Second)
 	v.SetDefault("backend.provider", BackendThanos)
 	v.SetDefault("backend.partial_response", false)
+	v.SetDefault("collector.storage_dir", "/var/lib/aio11y-otelcol/queue")
 
 	// AutomaticEnv only resolves keys that viper already knows about.
 	for _, key := range []string{
@@ -155,6 +159,7 @@ func Load() (*Config, error) {
 		"backend.query_password",
 		"backend.write_username",
 		"collector.telemetry_port",
+		"collector.storage_dir",
 	} {
 		if err := v.BindEnv(key); err != nil {
 			return nil, fmt.Errorf("failed to bind env for %q: %w", key, err)
@@ -204,7 +209,10 @@ func Load() (*Config, error) {
 			ReadTimeout:    v.GetDuration("db.read_timeout"),
 			WriteTimeout:   v.GetDuration("db.write_timeout"),
 		},
-		Collector: CollectorConfig{TelemetryPort: v.GetInt("collector.telemetry_port")},
+		Collector: CollectorConfig{
+			TelemetryPort: v.GetInt("collector.telemetry_port"),
+			StorageDir:    v.GetString("collector.storage_dir"),
+		},
 		Backend: BackendConfig{
 			Provider:        strings.ToLower(strings.TrimSpace(v.GetString("backend.provider"))),
 			QueryURLs:       splitURLs(v.GetString("backend.query_url")),

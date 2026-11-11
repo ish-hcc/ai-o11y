@@ -1,6 +1,19 @@
 exporters:
     otlp_http:
         endpoint: http://prometheus:9090/api/v1/otlp
+        retry_on_failure:
+            enabled: true
+            max_elapsed_time: 0s
+        sending_queue:
+            enabled: true
+            num_consumers: 1
+            queue_size: 268435456
+            sizer: bytes
+            storage: file_storage/queue
+extensions:
+    file_storage/queue:
+        create_directory: true
+        directory: /var/lib/aio11y-otelcol/queue
 processors:
     attributes/identity:
         actions:
@@ -8,6 +21,10 @@ processors:
               key: entity_id
               value: d44ikdomt0tac4ejrmmg
     batch: {}
+    memory_limiter:
+        check_interval: 1s
+        limit_mib: 400
+        spike_limit_mib: 100
 receivers:
     amd_gpu:
         collection_interval: 30s
@@ -37,11 +54,14 @@ receivers:
             processes: {}
             system: {}
 service:
+    extensions:
+        - file_storage/queue
     pipelines:
         metrics:
             exporters:
                 - otlp_http
             processors:
+                - memory_limiter
                 - attributes/identity
                 - batch
             receivers:

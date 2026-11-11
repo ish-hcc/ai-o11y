@@ -5,8 +5,12 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
+
+	"go.yaml.in/yaml/v3"
 
 	"github.com/cloud-barista/ai-o11y/internal/monitoring"
 	"github.com/cloud-barista/ai-o11y/internal/monitoring/catalog"
@@ -94,9 +98,9 @@ func TestRenderProcessorOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
-	want := "processors:\n                - zzz\n                - " + monitoring.IdentityProcessor + "\n                - " + BatchProcessor
+	want := "processors:\n                - " + MemoryLimiterProcessor + "\n                - zzz\n                - " + monitoring.IdentityProcessor + "\n                - " + BatchProcessor
 	if !strings.Contains(string(got), want) {
-		t.Fatalf("processors are not ordered other, identity, batch:\n%s", got)
+		t.Fatalf("processors are not ordered memory limiter, other, identity, batch:\n%s", got)
 	}
 }
 
@@ -116,6 +120,7 @@ func TestRenderRejects(t *testing.T) {
 		"duplicate id":       {vm(), []monitoring.CollectorKind{Hostmetrics{}, Hostmetrics{}}, endpoint},
 		"batch clashes":      {vm(), []monitoring.CollectorKind{Hostmetrics{}, fixedKind{frag: monitoring.ConfigFragment{Processors: map[string]any{BatchProcessor: nil}}}}, endpoint},
 		"identity clashes":   {vm(), []monitoring.CollectorKind{Hostmetrics{}, fixedKind{frag: monitoring.ConfigFragment{Processors: map[string]any{monitoring.IdentityProcessor: nil}}}}, endpoint},
+		"limiter clashes":    {vm(), []monitoring.CollectorKind{Hostmetrics{}, fixedKind{frag: monitoring.ConfigFragment{Processors: map[string]any{MemoryLimiterProcessor: nil}}}}, endpoint},
 	}
 	for name, tc := range cases {
 		if _, err := Render(tc.target, tc.kinds, c, tc.endpoint, Options{}); err == nil {
@@ -312,5 +317,73 @@ func TestRenderWriteAccount(t *testing.T) {
 	bad := []monitoring.Endpoint{{URL: "http://vmauth:8427/opentelemetry", BasicAuth: &monitoring.BasicAuth{Username: "writer"}}}
 	if _, err := Render(vm(), kinds, builtin(t), bad, Options{}); err == nil {
 		t.Error("an account without a password variable rendered")
+	}
+}
+
+// renderedConfig is the parts of a rendered configuration the disk queue
+// tests look at.
+type renderedConfig struct {
+	Exporters  map[string]map[string]any `yaml:"exporters"`
+	Extensions map[string]map[string]any `yaml:"extensions"`
+	Service    struct {
+		Extensions []string `yaml:"extensions"`
+	} `yaml:"service"`
+}
+
+// TestRenderDiskQueue: one endpoint keeps what it cannot send on disk and
+// retries it with no time limit; with several, only the last does, and the
+// others fail fast so the failover connector moves on. The queue directory
+// comes from the options, or the default.
+func TestRenderDiskQueue(t *testing.T) {
+	diskQueue := map[string]any{
+		"enabled":       true,
+		"storage":       ExtensionQueueStorage,
+		"num_consumers": 1,
+		"sizer":         "bytes",
+		"queue_size":    QueueSizeBytes,
+	}
+	forever := map[string]any{"enabled": true, "max_elapsed_time": "0s"}
+	off := map[string]any{"enabled": false}
+	three := append(failover[:2:2], monitoring.Endpoint{URL: "http://vmauth-3:8427/opentelemetry"})
+	for name, tc := range map[string]struct {
+		endpoints []monitoring.Endpoint
+		dir       string
+		queued    string
+		failFast  []string
+		wantDir   string
+	}{
+		"single":     {endpoint, "", ExporterOTLPHTTP, nil, DefaultStorageDir},
+		"single dir": {endpoint, "/srv/queue", ExporterOTLPHTTP, nil, "/srv/queue"},
+		"two":        {failover, "", ExporterOTLPHTTP + "/1", []string{ExporterOTLPHTTP + "/0"}, DefaultStorageDir},
+		"three":      {three, "/srv/queue", ExporterOTLPHTTP + "/2", []string{ExporterOTLPHTTP + "/0", ExporterOTLPHTTP + "/1"}, "/srv/queue"},
+	} {
+		out, err := Render(vm(), kinds, builtin(t), tc.endpoints, Options{StorageDir: tc.dir})
+		if err != nil {
+			t.Fatalf("%s: Render: %v", name, err)
+		}
+		var cfg renderedConfig
+		if err := yaml.Unmarshal(out, &cfg); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if len(cfg.Exporters) != 1+len(tc.failFast) {
+			t.Errorf("%s: %d exporters, want %d", name, len(cfg.Exporters), 1+len(tc.failFast))
+		}
+		q := cfg.Exporters[tc.queued]
+		if !reflect.DeepEqual(q["sending_queue"], diskQueue) || !reflect.DeepEqual(q["retry_on_failure"], forever) {
+			t.Errorf("%s: %s queue = %v, retry = %v", name, tc.queued, q["sending_queue"], q["retry_on_failure"])
+		}
+		for _, id := range tc.failFast {
+			e := cfg.Exporters[id]
+			if !reflect.DeepEqual(e["sending_queue"], off) || !reflect.DeepEqual(e["retry_on_failure"], off) {
+				t.Errorf("%s: %s queue = %v, retry = %v; want both off", name, id, e["sending_queue"], e["retry_on_failure"])
+			}
+		}
+		storage := cfg.Extensions[ExtensionQueueStorage]
+		if storage["directory"] != tc.wantDir || storage["create_directory"] != true {
+			t.Errorf("%s: storage = %v, want directory %s", name, storage, tc.wantDir)
+		}
+		if !slices.Contains(cfg.Service.Extensions, ExtensionQueueStorage) {
+			t.Errorf("%s: service extensions %v miss %s", name, cfg.Service.Extensions, ExtensionQueueStorage)
+		}
 	}
 }

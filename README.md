@@ -68,7 +68,14 @@ All routes are under `/aio11y` and, when `AIO11Y_AUTH_TOKEN` is set, need
 
 - **Collector**: the collector's own metrics are off by default
   (`AIO11Y_COLLECTOR_TELEMETRY_PORT=0`) and nothing reads them yet; set a port
-  to serve them on localhost.
+  to serve them on localhost. While the backend does not answer, the collector
+  keeps samples on its disk (`AIO11Y_COLLECTOR_STORAGE_DIR`, up to 256 MiB,
+  newest dropped beyond that) and sends them in order once it answers again,
+  also after a collector restart. A restart puts the request that was being
+  sent behind the others, so a backend that refuses out-of-order samples
+  (Prometheus without an out-of-order window) may refuse it. The collector
+  refuses new samples while it uses more than 300 MiB of memory (memory
+  limiter at 400 MiB with 100 MiB headroom).
 - **GPU**: NVIDIA GPUs are read with `nvidia-smi` and AMD GPUs with `amd-smi`;
   other vendors are not read. MIG and XID fields wait for an NVML source. AMD
   GPUs give only amd-smi's own fields yet: the common `hw.gpu.*` fields and
@@ -88,8 +95,11 @@ All routes are under `/aio11y` and, when `AIO11Y_AUTH_TOKEN` is set, need
   `otlp.translation_strategy: NoTranslation`, VictoriaMetrics with its default.
   A Thanos Receive rewrites the names and is not supported.
   `AIO11Y_BACKEND_PARTIAL_RESPONSE` is off for now.
-- **Write failover**: with several `AIO11Y_BACKEND_WRITE_URL`s the collector
-  keeps no queue, so samples are dropped while every address fails.
+- **Write failover**: with several `AIO11Y_BACKEND_WRITE_URL`s only the last
+  address has the disk queue: while every address fails, samples wait there
+  and go to the last address once it answers, even if an earlier one answers
+  first. The collector goes back to the first address only every 10 minutes
+  (the failover connector's retry interval).
 - **Accounts**: basic auth only. Collectors read the write account's password
   from `AIO11Y_WRITE_PASSWORD` on their host; a collector without it still
   starts, and every write is refused. Over plain HTTP the accounts travel in

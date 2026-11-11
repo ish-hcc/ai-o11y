@@ -16,12 +16,14 @@ receivers:
 processors:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.164.1
   - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.164.0
+  - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.164.0
 exporters:
   - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.164.0
 connectors:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/connector/failoverconnector v0.164.1
 extensions:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/basicauthextension v0.164.1
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage v0.164.1
 
 # ai-o11y's own components are built from this directory.
 replaces:
