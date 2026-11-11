@@ -118,7 +118,6 @@ func Load() (*Config, error) {
 	v := viper.New()
 	v.SetEnvPrefix(envPrefix)
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	v.AutomaticEnv()
 
 	v.SetDefault("server.port", 8094)
 	v.SetDefault("tumblebug.timeout", 2*time.Minute)
@@ -131,7 +130,8 @@ func Load() (*Config, error) {
 	v.SetDefault("backend.partial_response", false)
 	v.SetDefault("collector.storage_dir", "/var/lib/aio11y-otelcol/queue")
 
-	// AutomaticEnv only resolves keys that viper already knows about.
+	// Every key is bound on its own rather than through AutomaticEnv: with it,
+	// AIO11Y_BACKEND set would shadow every backend.* key as their parent.
 	for _, key := range []string{
 		"server.port",
 		"auth.token",
