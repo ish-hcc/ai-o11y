@@ -1,0 +1,53 @@
+# gateway-a (prometheus): node A's entry point. Every route goes to node A's
+# part first and to node B's when that one is down or answers 502, 503 or 504.
+#   no token          writes  /v1/metrics -> the relay, /v1/logs -> vlagent,
+#                             /v1/traces -> vtagent
+#   query token       queries /metrics/... -> thanos-query, which reads both Prometheus replicas,
+#                             /logs/... -> VictoriaLogs, /traces/... -> VictoriaTraces
+#                             (the first path segment is dropped)
+# %{QUERY_TOKEN} is filled from vmauth's environment.
+users:
+  - name: query
+    bearer_token: "%{QUERY_TOKEN}"
+    url_map:
+      - src_paths: ["/metrics/.*"]
+        drop_src_path_prefix_parts: 1
+        load_balancing_policy: first_available
+        retry_status_codes: [502, 503, 504]
+        url_prefix:
+          - http://thanos-query-a:10902
+          - http://thanos-query-b:10902
+      - src_paths: ["/logs/.*"]
+        drop_src_path_prefix_parts: 1
+        load_balancing_policy: first_available
+        retry_status_codes: [502, 503, 504]
+        url_prefix:
+          - http://victoria-logs-a:9428
+          - http://victoria-logs-b:9428
+      - src_paths: ["/traces/.*"]
+        drop_src_path_prefix_parts: 1
+        load_balancing_policy: first_available
+        retry_status_codes: [502, 503, 504]
+        url_prefix:
+          - http://victoria-traces-a:10428
+          - http://victoria-traces-b:10428
+unauthorized_user:
+  url_map:
+    - src_paths: ["/v1/metrics"]
+      load_balancing_policy: first_available
+      retry_status_codes: [502, 503, 504]
+      url_prefix:
+        - http://relay-a:4318
+        - http://relay-b:4318
+    - src_paths: ["/v1/logs"]
+      load_balancing_policy: first_available
+      retry_status_codes: [502, 503, 504]
+      url_prefix:
+        - http://vlagent-a:9429/insert/opentelemetry
+        - http://vlagent-b:9429/insert/opentelemetry
+    - src_paths: ["/v1/traces"]
+      load_balancing_policy: first_available
+      retry_status_codes: [502, 503, 504]
+      url_prefix:
+        - http://vtagent-a:10429/insert/opentelemetry
+        - http://vtagent-b:10429/insert/opentelemetry

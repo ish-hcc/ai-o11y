@@ -1,0 +1,20 @@
+global:
+  # Nothing is scraped; samples come over OTLP from the relays.
+  # The sidecar labels every block with these. The two replicas differ only in
+  # "replica" (REPLICA from the container's environment), which thanos-query
+  # merges on.
+  external_labels:
+    replica: ${REPLICA}
+
+otlp:
+  # Keep the metric and attribute names collectors send (system.cpu.time), the
+  # names ai-o11y's metric catalog queries. The default would rewrite them
+  # (system_cpu_time_seconds_total).
+  translation_strategy: NoTranslation
+
+storage:
+  tsdb:
+    # Collectors send at their own times, and a relay sends what it queued
+    # while this replica was down once it is back, so a late sample is not
+    # rejected.
+    out_of_order_time_window: 30m

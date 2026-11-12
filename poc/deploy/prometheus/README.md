@@ -1,5 +1,8 @@
 # Prometheus + Thanos sample
 
+To start the whole replicated setup on one host instead, see
+[deploy/README.md](../../../deploy/README.md).
+
 One Prometheus taking OTLP from the collectors, a Thanos Sidecar next to it and
 a Thanos Querier in front, the shape ai-o11y's Thanos backend was first tested
 against. It has no replication: one Prometheus, no object storage.

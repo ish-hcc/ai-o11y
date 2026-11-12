@@ -1,0 +1,11 @@
+# Kept out of the image build: local settings with passwords and tokens, and
+# build output the service image does not use.
+.env
+conf/setup.env
+poc/deploy/**/.env
+poc/deploy/**/node.env
+bin/
+otelcol/_build/
+otelcol/_tools/
+.git
+.claude

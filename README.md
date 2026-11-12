@@ -45,6 +45,11 @@ make otelcol-validate # render a target's configuration and validate it with the
 make -C otelcol test  # tests of the collector's own components and install scripts
 ```
 
+To try ai-o11y with a replicated store for metrics, logs and traces on one
+host, `cp .env.example .env && docker compose up -d` at the top of the
+repository; [deploy](deploy/README.md) explains the two choices of metrics
+store (VictoriaMetrics, or Prometheus with Thanos) and how to stop a node.
+
 To run the collector on a VM, [otelcol/install](otelcol/install/README.md)
 registers the VM as a target, fetches its configuration and installs a systemd
 service.

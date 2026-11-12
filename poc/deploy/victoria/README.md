@@ -1,5 +1,8 @@
 # VictoriaMetrics sample
 
+To start the whole replicated setup on one host instead, see
+[deploy/README.md](../../../deploy/README.md).
+
 Two single-node VictoriaMetrics (A, B) holding the same data. Collectors write
 through a vmauth to a vmagent, which writes every sample to both storages and
 buffers on disk for a storage that is down; queries go through a vmauth to the

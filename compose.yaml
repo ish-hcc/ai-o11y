@@ -1,0 +1,332 @@
+# ai-o11y with replicated storage on one host, for trying the setup out.
+#
+# Two nodes, A and B, are imitated by two sets of services on one bridge
+# network: every store is kept twice (one copy per node) and each node has an
+# entry point (gateway-a, gateway-b, vmauth) that prefers its own node and moves
+# to the other one when that is down. See deploy/README.md.
+#
+# Pick the metrics store in .env, both settings together:
+#   COMPOSE_PROFILES=victoria   with AIO11Y_BACKEND=victoria
+#   COMPOSE_PROFILES=prometheus with AIO11Y_BACKEND=thanos
+# Logs and traces are kept in VictoriaLogs and VictoriaTraces in either.
+#
+# Plain HTTP everywhere: do not expose the gateway ports beyond a trusted
+# network.
+name: ai-o11y
+
+x-vm-health: &vm-health
+  interval: 10s
+  timeout: 3s
+  retries: 6
+
+services:
+  mariadb:
+    image: mariadb:11.8.3
+    restart: unless-stopped
+    environment:
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+      MARIADB_DATABASE: ${DB_NAME:-aio11y}
+      MARIADB_USER: ${DB_USER:-aio11y}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes: [mariadb:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ai-o11y-server:
+    build: .
+    image: ai-o11y:local
+    restart: unless-stopped
+    environment:
+      AIO11Y_SERVER_PORT: "8094"
+      AIO11Y_AUTH_TOKEN: ${AIO11Y_AUTH_TOKEN:-}
+      AIO11Y_TUMBLEBUG_BASE_URL: ${AIO11Y_TUMBLEBUG_BASE_URL:-}
+      AIO11Y_TUMBLEBUG_USERNAME: ${AIO11Y_TUMBLEBUG_USERNAME:-}
+      AIO11Y_TUMBLEBUG_PASSWORD: ${AIO11Y_TUMBLEBUG_PASSWORD:-}
+      AIO11Y_DB_HOST: mariadb
+      AIO11Y_DB_PORT: "3306"
+      AIO11Y_DB_NAME: ${DB_NAME:-aio11y}
+      AIO11Y_DB_USER: ${DB_USER:-aio11y}
+      AIO11Y_DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      AIO11Y_BACKEND: "${AIO11Y_BACKEND:?set AIO11Y_BACKEND in .env to victoria or thanos}"
+      # ai-o11y queries through the gateways inside the network, its own node's first.
+      AIO11Y_BACKEND_QUERY_URL: http://gateway-a:8427/metrics,http://gateway-b:8427/metrics
+      AIO11Y_BACKEND_QUERY_BEARER_TOKEN: ${QUERY_TOKEN:?set QUERY_TOKEN in .env}
+      # Thanos: with it off, every query fails while one Prometheus is down,
+      # though the other replica holds a full copy. VictoriaMetrics ignores it
+      # and logs a warning saying so.
+      AIO11Y_BACKEND_PARTIAL_RESPONSE: ${AIO11Y_BACKEND_PARTIAL_RESPONSE:-true}
+      # Collectors run elsewhere and reach the gateways through this host's ports.
+      AIO11Y_BACKEND_WRITE_URL: &write-url http://${AIO11Y_PUBLIC_HOST:?set AIO11Y_PUBLIC_HOST in .env}:${GATEWAY_A_PORT:-14318},http://${AIO11Y_PUBLIC_HOST}:${GATEWAY_B_PORT:-14319}
+      AIO11Y_BACKEND_LOGS_WRITE_URL: *write-url
+      AIO11Y_BACKEND_TRACES_WRITE_URL: *write-url
+    ports: ["${AIO11Y_PORT:-8094}:8094"]
+    depends_on:
+      mariadb: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8094/aio11y/readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+  # Entry points. Collectors write with no token; queries carry
+  # "Authorization: Bearer ${QUERY_TOKEN}". The routes differ by metrics store,
+  # so the configuration is read from deploy/<profile>/.
+  gateway-a:
+    image: victoriametrics/vmauth:${VM_VERSION}
+    restart: unless-stopped
+    command: [-auth.config=/etc/vmauth/auth.yml]
+    environment:
+      QUERY_TOKEN: ${QUERY_TOKEN}
+    volumes:
+      - ./deploy/${COMPOSE_PROFILES:?set COMPOSE_PROFILES in .env to victoria or prometheus}/gateway-a.yml:/etc/vmauth/auth.yml:ro
+    ports: ["${GATEWAY_A_PORT:-14318}:8427"]
+    healthcheck:
+      <<: *vm-health
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8427/health"]
+  gateway-b:
+    image: victoriametrics/vmauth:${VM_VERSION}
+    restart: unless-stopped
+    command: [-auth.config=/etc/vmauth/auth.yml]
+    environment:
+      QUERY_TOKEN: ${QUERY_TOKEN}
+    volumes:
+      - ./deploy/${COMPOSE_PROFILES}/gateway-b.yml:/etc/vmauth/auth.yml:ro
+    ports: ["${GATEWAY_B_PORT:-14319}:8427"]
+    healthcheck:
+      <<: *vm-health
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8427/health"]
+
+  # Logs: each node's vlagent writes to both VictoriaLogs and keeps on disk what
+  # one cannot take yet. Queries read one copy, not both merged: vlselect over
+  # two copies returns every line twice.
+  victoria-logs-a: &victoria-logs
+    image: victoriametrics/victoria-logs:${VL_VERSION}
+    restart: unless-stopped
+    command:
+      - -httpListenAddr=:9428
+      - -storageDataPath=/storage
+      - -retentionPeriod=${RETENTION:-15d}
+    volumes: [victoria-logs-a:/storage]
+  victoria-logs-b:
+    <<: *victoria-logs
+    volumes: [victoria-logs-b:/storage]
+  vlagent-a: &vlagent
+    image: victoriametrics/vlagent:${VL_VERSION}
+    restart: unless-stopped
+    command:
+      - -httpListenAddr=:9429
+      - -remoteWrite.url=http://victoria-logs-a:9428/insert/native
+      - -remoteWrite.url=http://victoria-logs-b:9428/insert/native
+      - -remoteWrite.tmpDataPath=/queue
+      - -remoteWrite.maxDiskUsagePerURL=${QUEUE_MAX:-1GB}
+    volumes: [vlagent-a:/queue]
+  vlagent-b:
+    <<: *vlagent
+    volumes: [vlagent-b:/queue]
+
+  # Traces: the same shape as logs, with VictoriaTraces and vtagent.
+  victoria-traces-a: &victoria-traces
+    image: victoriametrics/victoria-traces:${VT_VERSION}
+    restart: unless-stopped
+    command:
+      - -httpListenAddr=:10428
+      - -storageDataPath=/storage
+      - -retentionPeriod=${RETENTION:-15d}
+    volumes: [victoria-traces-a:/storage]
+  victoria-traces-b:
+    <<: *victoria-traces
+    volumes: [victoria-traces-b:/storage]
+  vtagent-a: &vtagent
+    image: victoriametrics/vtagent:${VT_VERSION}
+    restart: unless-stopped
+    command:
+      - -httpListenAddr=:10429
+      - -remoteWrite.url=http://victoria-traces-a:10428/insert/native
+      - -remoteWrite.url=http://victoria-traces-b:10428/insert/native
+      - -remoteWrite.tmpDataPath=/queue
+      - -remoteWrite.maxDiskUsagePerURL=${QUEUE_MAX:-1GB}
+    volumes: [vtagent-a:/queue]
+  vtagent-b:
+    <<: *vtagent
+    volumes: [vtagent-b:/queue]
+
+  # Profile victoria: VictoriaMetrics cluster, one vmstorage per node.
+  # vminsert writes only to its own node's vmstorage (and holds in memory what
+  # that one cannot take yet); the second copy comes
+  # from vmagent, which writes every sample to both nodes' vminsert. vmselect
+  # reads both vmstorage and merges the copies (dedup 1ms keeps one of two
+  # equal samples), so a span one copy lacks is filled from the other.
+  vmstorage-a: &vmstorage
+    image: victoriametrics/vmstorage:${VM_VERSION}-cluster
+    profiles: [victoria]
+    restart: unless-stopped
+    command:
+      - -storageDataPath=/storage
+      - -retentionPeriod=${RETENTION:-15d}
+      - -dedup.minScrapeInterval=1ms
+    volumes: [vmstorage-a:/storage]
+    healthcheck:
+      <<: *vm-health
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8482/health"]
+  vmstorage-b:
+    <<: *vmstorage
+    volumes: [vmstorage-b:/storage]
+  vminsert-a:
+    image: victoriametrics/vminsert:${VM_VERSION}-cluster
+    profiles: [victoria]
+    restart: unless-stopped
+    command: [-storageNode=vmstorage-a:8400]
+    healthcheck: &vminsert-health
+      <<: *vm-health
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8480/health"]
+  vminsert-b:
+    image: victoriametrics/vminsert:${VM_VERSION}-cluster
+    profiles: [victoria]
+    restart: unless-stopped
+    command: [-storageNode=vmstorage-b:8400]
+    healthcheck: *vminsert-health
+  vmselect-a: &vmselect
+    image: victoriametrics/vmselect:${VM_VERSION}-cluster
+    profiles: [victoria]
+    restart: unless-stopped
+    command:
+      - -storageNode=vmstorage-a:8401,vmstorage-b:8401
+      - -dedup.minScrapeInterval=1ms
+    healthcheck:
+      <<: *vm-health
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8481/health"]
+  vmselect-b:
+    <<: *vmselect
+    command:
+      - -storageNode=vmstorage-b:8401,vmstorage-a:8401
+      - -dedup.minScrapeInterval=1ms
+  # Metric and attribute names stay as collectors send them (system.cpu.time),
+  # the names ai-o11y's metric catalog queries: -opentelemetry.usePrometheusNaming
+  # is off. Scope labels are off too: with them a collector upgrade changes
+  # scope.version and starts new series.
+  vmagent-a: &vmagent
+    image: victoriametrics/vmagent:${VM_VERSION}
+    profiles: [victoria]
+    restart: unless-stopped
+    command:
+      - -remoteWrite.url=http://vminsert-a:8480/insert/0/prometheus/api/v1/write
+      - -remoteWrite.url=http://vminsert-b:8480/insert/0/prometheus/api/v1/write
+      - -remoteWrite.tmpDataPath=/queue
+      - -remoteWrite.maxDiskUsagePerURL=${QUEUE_MAX:-1GB}
+      - -opentelemetry.usePrometheusNaming=false
+      - -opentelemetry.promoteScopeMetadata=false
+    volumes: [vmagent-a:/queue]
+    healthcheck:
+      <<: *vm-health
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8429/health"]
+  vmagent-b:
+    <<: *vmagent
+    volumes: [vmagent-b:/queue]
+
+  # Profile prometheus: one Prometheus per node, told apart by the external
+  # label replica (a, b). Each node's relay writes every sample to both and
+  # keeps on disk what one cannot take yet. thanos-query reads both through
+  # their sidecars and merges the replicas, so a span one lacks is filled from
+  # the other.
+  prometheus-a: &prometheus
+    image: prom/prometheus:${PROMETHEUS_VERSION}
+    profiles: [prometheus]
+    restart: unless-stopped
+    environment:
+      REPLICA: a
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${RETENTION:-15d}
+      - --web.enable-otlp-receiver
+      # The sidecar needs blocks of a fixed size and compaction left to Thanos.
+      - --storage.tsdb.min-block-duration=2h
+      - --storage.tsdb.max-block-duration=2h
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-a:/prometheus
+    healthcheck:
+      <<: *vm-health
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/-/ready"]
+  prometheus-b:
+    <<: *prometheus
+    environment:
+      REPLICA: b
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-b:/prometheus
+  thanos-sidecar-a: &thanos-sidecar
+    image: quay.io/thanos/thanos:${THANOS_VERSION}
+    profiles: [prometheus]
+    restart: unless-stopped
+    command:
+      - sidecar
+      - --tsdb.path=/prometheus
+      - --prometheus.url=http://prometheus-a:9090
+      - --grpc-address=0.0.0.0:10901
+      - --http-address=0.0.0.0:10902
+    volumes: [prometheus-a:/prometheus]
+    healthcheck: &thanos-health
+      <<: *vm-health
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:10902/-/healthy"]
+  thanos-sidecar-b:
+    <<: *thanos-sidecar
+    command:
+      - sidecar
+      - --tsdb.path=/prometheus
+      - --prometheus.url=http://prometheus-b:9090
+      - --grpc-address=0.0.0.0:10901
+      - --http-address=0.0.0.0:10902
+    volumes: [prometheus-b:/prometheus]
+  thanos-query-a: &thanos-query
+    image: quay.io/thanos/thanos:${THANOS_VERSION}
+    profiles: [prometheus]
+    restart: unless-stopped
+    command:
+      - query
+      - --http-address=0.0.0.0:10902
+      - --grpc-address=0.0.0.0:10901
+      - --endpoint=thanos-sidecar-a:10901
+      - --endpoint=thanos-sidecar-b:10901
+      - --query.replica-label=replica
+    healthcheck: *thanos-health
+  thanos-query-b:
+    <<: *thanos-query
+  # The relay writes its disk queue to a named volume, which Docker creates
+  # owned by root, so it runs as root.
+  relay-a: &relay
+    image: otel/opentelemetry-collector-contrib:${OTELCOL_VERSION}
+    profiles: [prometheus]
+    restart: unless-stopped
+    user: "0:0"
+    command: [--config=/etc/otelcol/relay.yml]
+    volumes:
+      - ./deploy/prometheus/relay.yml:/etc/otelcol/relay.yml:ro
+      - relay-a:/queue
+  relay-b:
+    <<: *relay
+    volumes:
+      - ./deploy/prometheus/relay.yml:/etc/otelcol/relay.yml:ro
+      - relay-b:/queue
+
+volumes:
+  mariadb:
+  victoria-logs-a:
+  victoria-logs-b:
+  vlagent-a:
+  vlagent-b:
+  victoria-traces-a:
+  victoria-traces-b:
+  vtagent-a:
+  vtagent-b:
+  vmstorage-a:
+  vmstorage-b:
+  vmagent-a:
+  vmagent-b:
+  prometheus-a:
+  prometheus-b:
+  relay-a:
+  relay-b:

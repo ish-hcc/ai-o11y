@@ -1,0 +1,46 @@
+# Relay in front of the two Prometheus replicas: takes OTLP from collectors
+# and writes every sample to both. Each destination has its own queue on disk
+# (file_storage) and is retried with no time limit, so while one replica is
+# down its share is kept and sent once it is back, across a relay restart too.
+# The queue holds up to queue_size requests; past that new requests to that
+# destination are dropped.
+extensions:
+  file_storage/prometheus-a:
+    directory: /queue/prometheus-a
+    create_directory: true
+  file_storage/prometheus-b:
+    directory: /queue/prometheus-b
+    create_directory: true
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  otlp_http/prometheus-a:
+    endpoint: http://prometheus-a:9090/api/v1/otlp
+    retry_on_failure:
+      enabled: true
+      max_elapsed_time: 0
+    sending_queue:
+      enabled: true
+      storage: file_storage/prometheus-a
+      queue_size: 10000
+  otlp_http/prometheus-b:
+    endpoint: http://prometheus-b:9090/api/v1/otlp
+    retry_on_failure:
+      enabled: true
+      max_elapsed_time: 0
+    sending_queue:
+      enabled: true
+      storage: file_storage/prometheus-b
+      queue_size: 10000
+
+service:
+  extensions: [file_storage/prometheus-a, file_storage/prometheus-b]
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      exporters: [otlp_http/prometheus-a, otlp_http/prometheus-b]

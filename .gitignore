@@ -2,6 +2,7 @@ bin/
 otelcol/_build/
 otelcol/_tools/
 conf/setup.env
+/.env
 
 # Local settings of the sample deployments.
 poc/deploy/**/.env
