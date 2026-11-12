@@ -64,6 +64,17 @@ type BackendConfig struct {
 	// sent with. Both empty sends none; one without the other is an error.
 	QueryUsername string
 	QueryPassword string
+	// QueryBearerToken is sent as "Authorization: Bearer" with every query,
+	// such as the read token of a proxy in front of the query API. It cannot
+	// be set together with the basic auth account.
+	QueryBearerToken string
+	// QueryTLSCAFile is a PEM file of the CAs https query addresses are
+	// verified against instead of the system's, such as a private CA. A file
+	// that cannot be read fails startup.
+	QueryTLSCAFile string
+	// QueryTLSInsecureSkipVerify accepts any certificate from a query
+	// address. Off by default; on is for trying out a setup only.
+	QueryTLSInsecureSkipVerify bool
 	// WriteUsername is the basic auth account collectors write with. Its
 	// password is not set here: each collector reads it from its own host's
 	// environment.
@@ -128,6 +139,7 @@ func Load() (*Config, error) {
 	v.SetDefault("db.write_timeout", 30*time.Second)
 	v.SetDefault("backend.provider", BackendThanos)
 	v.SetDefault("backend.partial_response", false)
+	v.SetDefault("backend.query_tls_insecure_skip_verify", false)
 	v.SetDefault("collector.storage_dir", "/var/lib/aio11y-otelcol/queue")
 
 	// Every key is bound on its own rather than through AutomaticEnv: with it,
@@ -157,6 +169,9 @@ func Load() (*Config, error) {
 		"backend.partial_response",
 		"backend.query_username",
 		"backend.query_password",
+		"backend.query_bearer_token",
+		"backend.query_tls_ca_file",
+		"backend.query_tls_insecure_skip_verify",
 		"backend.write_username",
 		"collector.telemetry_port",
 		"collector.storage_dir",
@@ -225,6 +240,10 @@ func Load() (*Config, error) {
 			QueryUsername:   v.GetString("backend.query_username"),
 			QueryPassword:   v.GetString("backend.query_password"),
 			WriteUsername:   v.GetString("backend.write_username"),
+
+			QueryBearerToken:           v.GetString("backend.query_bearer_token"),
+			QueryTLSCAFile:             strings.TrimSpace(v.GetString("backend.query_tls_ca_file")),
+			QueryTLSInsecureSkipVerify: v.GetBool("backend.query_tls_insecure_skip_verify"),
 		},
 	}
 	if cfg.Backend.Provider != BackendThanos && cfg.Backend.Provider != BackendVictoria {
@@ -232,6 +251,9 @@ func Load() (*Config, error) {
 	}
 	if (cfg.Backend.QueryUsername == "") != (cfg.Backend.QueryPassword == "") {
 		return nil, fmt.Errorf("%s_BACKEND_QUERY_USERNAME and _QUERY_PASSWORD must be set together", envPrefix)
+	}
+	if cfg.Backend.QueryUsername != "" && cfg.Backend.QueryBearerToken != "" {
+		return nil, fmt.Errorf("%s_BACKEND_QUERY_USERNAME and _QUERY_BEARER_TOKEN cannot be set together: a query carries one Authorization header", envPrefix)
 	}
 	if cfg.Server.Port <= 0 || cfg.Server.Port > 65535 {
 		return nil, fmt.Errorf("%s_SERVER_PORT must be between 1 and 65535, got %d", envPrefix, cfg.Server.Port)

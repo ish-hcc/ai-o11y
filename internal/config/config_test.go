@@ -20,6 +20,24 @@ func TestQueryAccountSetTogether(t *testing.T) {
 	}
 }
 
+func TestQueryBasicAndBearerRefused(t *testing.T) {
+	t.Setenv("AIO11Y_BACKEND_QUERY_USERNAME", "reader")
+	t.Setenv("AIO11Y_BACKEND_QUERY_PASSWORD", "pw")
+	t.Setenv("AIO11Y_BACKEND_QUERY_BEARER_TOKEN", "read-token")
+	if _, err := Load(); err == nil {
+		t.Error("a basic auth account and a bearer token loaded together")
+	}
+	t.Setenv("AIO11Y_BACKEND_QUERY_USERNAME", "")
+	t.Setenv("AIO11Y_BACKEND_QUERY_PASSWORD", "")
+	cfg, err := Load()
+	if err != nil || cfg.Backend.QueryBearerToken != "read-token" {
+		t.Errorf("Load = %+v, %v, want the bearer token alone", cfg, err)
+	}
+	if cfg != nil && cfg.Backend.QueryTLSInsecureSkipVerify {
+		t.Error("QueryTLSInsecureSkipVerify is on by default")
+	}
+}
+
 func TestBackendTimeouts(t *testing.T) {
 	t.Setenv("AIO11Y_BACKEND_TIMEOUT", "")
 	t.Setenv("AIO11Y_BACKEND_CONNECT_TIMEOUT", "3s")
@@ -75,41 +93,46 @@ func TestBackendEnvDoesNotShadowBackendKeys(t *testing.T) {
 }
 
 // TestTemplateVariablesLoad gives every variable conf/template-setup.env
-// exports a value of its own and checks each lands in Config.
+// exports a value of its own and checks each lands in Config. A variable that
+// cannot be set together with others is loaded apart, with those cleared.
 func TestTemplateVariablesLoad(t *testing.T) {
 	cases := map[string]struct {
 		value string
 		got   func(*Config) any
 		want  any
+		apart []string
 	}{
-		"AIO11Y_SERVER_PORT":                 {"18094", func(c *Config) any { return c.Server.Port }, 18094},
-		"AIO11Y_AUTH_TOKEN":                  {"tok", func(c *Config) any { return c.Auth.Token }, "tok"},
-		"AIO11Y_TUMBLEBUG_BASE_URL":          {"http://tb:1323/tumblebug/", func(c *Config) any { return c.Tumblebug.BaseURL }, "http://tb:1323/tumblebug"},
-		"AIO11Y_TUMBLEBUG_USERNAME":          {"tbuser", func(c *Config) any { return c.Tumblebug.Username }, "tbuser"},
-		"AIO11Y_TUMBLEBUG_PASSWORD":          {"tbpw", func(c *Config) any { return c.Tumblebug.Password }, "tbpw"},
-		"AIO11Y_TUMBLEBUG_CREDENTIAL_HOLDER": {"holder", func(c *Config) any { return c.Tumblebug.CredentialHolder }, "holder"},
-		"AIO11Y_TUMBLEBUG_TIMEOUT":           {"7m", func(c *Config) any { return c.Tumblebug.Timeout }, 7 * time.Minute},
-		"AIO11Y_DB_HOST":                     {"dbhost", func(c *Config) any { return c.DB.Host }, "dbhost"},
-		"AIO11Y_DB_PORT":                     {"3307", func(c *Config) any { return c.DB.Port }, 3307},
-		"AIO11Y_DB_NAME":                     {"dbname", func(c *Config) any { return c.DB.Name }, "dbname"},
-		"AIO11Y_DB_USER":                     {"dbuser", func(c *Config) any { return c.DB.User }, "dbuser"},
-		"AIO11Y_DB_PASSWORD":                 {"dbpw", func(c *Config) any { return c.DB.Password }, "dbpw"},
-		"AIO11Y_DB_CONNECT_TIMEOUT":          {"6s", func(c *Config) any { return c.DB.ConnectTimeout }, 6 * time.Second},
-		"AIO11Y_DB_READ_TIMEOUT":             {"31s", func(c *Config) any { return c.DB.ReadTimeout }, 31 * time.Second},
-		"AIO11Y_DB_WRITE_TIMEOUT":            {"32s", func(c *Config) any { return c.DB.WriteTimeout }, 32 * time.Second},
-		"AIO11Y_BACKEND":                     {"VICTORIA", func(c *Config) any { return c.Backend.Provider }, BackendVictoria},
-		"AIO11Y_BACKEND_QUERY_URL":           {"http://q1, http://q2/", func(c *Config) any { return strings.Join(c.Backend.QueryURLs, ",") }, "http://q1,http://q2"},
-		"AIO11Y_BACKEND_WRITE_URL":           {"http://w1/", func(c *Config) any { return strings.Join(c.Backend.WriteURLs, ",") }, "http://w1"},
-		"AIO11Y_BACKEND_TIMEOUT":             {"45s", func(c *Config) any { return c.Backend.Timeout }, 45 * time.Second},
-		"AIO11Y_BACKEND_CONNECT_TIMEOUT":     {"4s", func(c *Config) any { return c.Backend.ConnectTimeout }, 4 * time.Second},
-		"AIO11Y_BACKEND_MAX_CONCURRENT":      {"3", func(c *Config) any { return c.Backend.MaxConcurrent }, 3},
-		"AIO11Y_BACKEND_MAX_IDS":             {"100", func(c *Config) any { return c.Backend.MaxIDs }, 100},
-		"AIO11Y_BACKEND_QUERY_USERNAME":      {"reader", func(c *Config) any { return c.Backend.QueryUsername }, "reader"},
-		"AIO11Y_BACKEND_QUERY_PASSWORD":      {"readpw", func(c *Config) any { return c.Backend.QueryPassword }, "readpw"},
-		"AIO11Y_BACKEND_WRITE_USERNAME":      {"writer", func(c *Config) any { return c.Backend.WriteUsername }, "writer"},
-		"AIO11Y_BACKEND_PARTIAL_RESPONSE":    {"true", func(c *Config) any { return c.Backend.PartialResponse }, true},
-		"AIO11Y_COLLECTOR_TELEMETRY_PORT":    {"8888", func(c *Config) any { return c.Collector.TelemetryPort }, 8888},
-		"AIO11Y_COLLECTOR_STORAGE_DIR":       {"/srv/queue", func(c *Config) any { return c.Collector.StorageDir }, "/srv/queue"},
+		"AIO11Y_SERVER_PORT":                            {"18094", func(c *Config) any { return c.Server.Port }, 18094, nil},
+		"AIO11Y_AUTH_TOKEN":                             {"tok", func(c *Config) any { return c.Auth.Token }, "tok", nil},
+		"AIO11Y_TUMBLEBUG_BASE_URL":                     {"http://tb:1323/tumblebug/", func(c *Config) any { return c.Tumblebug.BaseURL }, "http://tb:1323/tumblebug", nil},
+		"AIO11Y_TUMBLEBUG_USERNAME":                     {"tbuser", func(c *Config) any { return c.Tumblebug.Username }, "tbuser", nil},
+		"AIO11Y_TUMBLEBUG_PASSWORD":                     {"tbpw", func(c *Config) any { return c.Tumblebug.Password }, "tbpw", nil},
+		"AIO11Y_TUMBLEBUG_CREDENTIAL_HOLDER":            {"holder", func(c *Config) any { return c.Tumblebug.CredentialHolder }, "holder", nil},
+		"AIO11Y_TUMBLEBUG_TIMEOUT":                      {"7m", func(c *Config) any { return c.Tumblebug.Timeout }, 7 * time.Minute, nil},
+		"AIO11Y_DB_HOST":                                {"dbhost", func(c *Config) any { return c.DB.Host }, "dbhost", nil},
+		"AIO11Y_DB_PORT":                                {"3307", func(c *Config) any { return c.DB.Port }, 3307, nil},
+		"AIO11Y_DB_NAME":                                {"dbname", func(c *Config) any { return c.DB.Name }, "dbname", nil},
+		"AIO11Y_DB_USER":                                {"dbuser", func(c *Config) any { return c.DB.User }, "dbuser", nil},
+		"AIO11Y_DB_PASSWORD":                            {"dbpw", func(c *Config) any { return c.DB.Password }, "dbpw", nil},
+		"AIO11Y_DB_CONNECT_TIMEOUT":                     {"6s", func(c *Config) any { return c.DB.ConnectTimeout }, 6 * time.Second, nil},
+		"AIO11Y_DB_READ_TIMEOUT":                        {"31s", func(c *Config) any { return c.DB.ReadTimeout }, 31 * time.Second, nil},
+		"AIO11Y_DB_WRITE_TIMEOUT":                       {"32s", func(c *Config) any { return c.DB.WriteTimeout }, 32 * time.Second, nil},
+		"AIO11Y_BACKEND":                                {"VICTORIA", func(c *Config) any { return c.Backend.Provider }, BackendVictoria, nil},
+		"AIO11Y_BACKEND_QUERY_URL":                      {"http://q1, http://q2/", func(c *Config) any { return strings.Join(c.Backend.QueryURLs, ",") }, "http://q1,http://q2", nil},
+		"AIO11Y_BACKEND_WRITE_URL":                      {"http://w1/", func(c *Config) any { return strings.Join(c.Backend.WriteURLs, ",") }, "http://w1", nil},
+		"AIO11Y_BACKEND_TIMEOUT":                        {"45s", func(c *Config) any { return c.Backend.Timeout }, 45 * time.Second, nil},
+		"AIO11Y_BACKEND_CONNECT_TIMEOUT":                {"4s", func(c *Config) any { return c.Backend.ConnectTimeout }, 4 * time.Second, nil},
+		"AIO11Y_BACKEND_MAX_CONCURRENT":                 {"3", func(c *Config) any { return c.Backend.MaxConcurrent }, 3, nil},
+		"AIO11Y_BACKEND_MAX_IDS":                        {"100", func(c *Config) any { return c.Backend.MaxIDs }, 100, nil},
+		"AIO11Y_BACKEND_QUERY_USERNAME":                 {"reader", func(c *Config) any { return c.Backend.QueryUsername }, "reader", nil},
+		"AIO11Y_BACKEND_QUERY_PASSWORD":                 {"readpw", func(c *Config) any { return c.Backend.QueryPassword }, "readpw", nil},
+		"AIO11Y_BACKEND_WRITE_USERNAME":                 {"writer", func(c *Config) any { return c.Backend.WriteUsername }, "writer", nil},
+		"AIO11Y_BACKEND_PARTIAL_RESPONSE":               {"true", func(c *Config) any { return c.Backend.PartialResponse }, true, nil},
+		"AIO11Y_BACKEND_QUERY_BEARER_TOKEN":             {"read-token", func(c *Config) any { return c.Backend.QueryBearerToken }, "read-token", []string{"AIO11Y_BACKEND_QUERY_USERNAME", "AIO11Y_BACKEND_QUERY_PASSWORD"}},
+		"AIO11Y_BACKEND_QUERY_TLS_CA_FILE":              {" /etc/aio11y/ca.pem ", func(c *Config) any { return c.Backend.QueryTLSCAFile }, "/etc/aio11y/ca.pem", nil},
+		"AIO11Y_BACKEND_QUERY_TLS_INSECURE_SKIP_VERIFY": {"true", func(c *Config) any { return c.Backend.QueryTLSInsecureSkipVerify }, true, nil},
+		"AIO11Y_COLLECTOR_TELEMETRY_PORT":               {"8888", func(c *Config) any { return c.Collector.TelemetryPort }, 8888, nil},
+		"AIO11Y_COLLECTOR_STORAGE_DIR":                  {"/srv/queue", func(c *Config) any { return c.Collector.StorageDir }, "/srv/queue", nil},
 	}
 
 	raw, err := os.ReadFile("../../conf/template-setup.env")
@@ -136,15 +159,37 @@ func TestTemplateVariablesLoad(t *testing.T) {
 	}
 
 	for name, c := range cases {
-		t.Setenv(name, c.value)
+		if c.apart == nil {
+			t.Setenv(name, c.value)
+		}
 	}
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 	for name, c := range cases {
-		if got := c.got(cfg); got != c.want {
-			t.Errorf("%s=%q: got %v, want %v", name, c.value, got, c.want)
+		if c.apart == nil {
+			if got := c.got(cfg); got != c.want {
+				t.Errorf("%s=%q: got %v, want %v", name, c.value, got, c.want)
+			}
 		}
+	}
+	for name, c := range cases {
+		if c.apart == nil {
+			continue
+		}
+		t.Run(name, func(t *testing.T) {
+			for _, other := range c.apart {
+				t.Setenv(other, "")
+			}
+			t.Setenv(name, c.value)
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			if got := c.got(cfg); got != c.want {
+				t.Errorf("%s=%q: got %v, want %v", name, c.value, got, c.want)
+			}
+		})
 	}
 }

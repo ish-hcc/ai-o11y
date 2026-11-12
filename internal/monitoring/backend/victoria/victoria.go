@@ -46,12 +46,16 @@ type Config struct {
 	// ConnectTimeout bounds connecting to one query address; zero takes
 	// promapi.DefaultConnectTimeout.
 	ConnectTimeout time.Duration
-	// PartialResponse has no counterpart in single-node VictoriaMetrics, which
-	// answers from its one store; it is accepted and ignored.
+	// PartialResponse is not sent. Single-node VictoriaMetrics answers from
+	// its one store; a cluster's vmselect answers partially by default unless
+	// started with -search.denyPartialResponse, and that flag decides. It is
+	// accepted and ignored.
 	PartialResponse bool
 	Limits          query.ChunkLimits
 	// Headers are set on every query request.
 	Headers map[string]string
+	// TLS is how https query addresses are verified.
+	TLS promapi.TLS
 }
 
 // Backend implements monitoring.Backend over the VictoriaMetrics query API.
@@ -72,7 +76,7 @@ func New(cfg Config, renderer query.PromQL) (*Backend, error) {
 		return nil, errors.New("victoria query URL is empty")
 	}
 	if cfg.PartialResponse {
-		log.Warn().Msg("Partial responses do not apply to single-node VictoriaMetrics; the setting is ignored")
+		log.Warn().Msg("Partial responses are not sent to VictoriaMetrics: a single node has one store and a cluster's vmselect follows its -search.denyPartialResponse flag; the setting is ignored")
 	}
 	if cfg.Timeout == 0 {
 		cfg.Timeout = DefaultTimeout
@@ -95,6 +99,7 @@ func New(cfg Config, renderer query.PromQL) (*Backend, error) {
 		BaseURLs:       cfg.QueryURLs,
 		Timeout:        cfg.Timeout,
 		Headers:        cfg.Headers,
+		TLS:            cfg.TLS,
 	})
 	if err != nil {
 		return nil, err

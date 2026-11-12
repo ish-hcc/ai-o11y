@@ -17,6 +17,7 @@ import (
 
 	"github.com/cloud-barista/ai-o11y/internal/config"
 	"github.com/cloud-barista/ai-o11y/internal/monitoring"
+	"github.com/cloud-barista/ai-o11y/internal/monitoring/backend/promapi"
 	"github.com/cloud-barista/ai-o11y/internal/monitoring/backend/thanos"
 	"github.com/cloud-barista/ai-o11y/internal/monitoring/backend/victoria"
 	"github.com/cloud-barista/ai-o11y/internal/monitoring/catalog"
@@ -179,19 +180,26 @@ func newBackend(cfg *config.Config, renderer query.PromQL) (monitoring.Backend, 
 	}
 	limits := query.ChunkLimits{MaxIDs: bc.MaxIDs, MaxConcurrent: bc.MaxConcurrent}
 	var headers map[string]string
-	if bc.QueryUsername != "" {
+	switch {
+	case bc.QueryUsername != "":
 		headers = map[string]string{"Authorization": basicAuth(bc.QueryUsername, bc.QueryPassword)}
+	case bc.QueryBearerToken != "":
+		headers = map[string]string{"Authorization": "Bearer " + bc.QueryBearerToken}
+	}
+	tlsCfg := promapi.TLS{CAFile: bc.QueryTLSCAFile, InsecureSkipVerify: bc.QueryTLSInsecureSkipVerify}
+	if tlsCfg.InsecureSkipVerify {
+		log.Warn().Msg("AIO11Y_BACKEND_QUERY_TLS_INSECURE_SKIP_VERIFY is on: query addresses' certificates are not verified")
 	}
 	switch bc.Provider {
 	case config.BackendVictoria:
 		return victoria.New(victoria.Config{
 			QueryURLs: bc.QueryURLs, Write: write, Timeout: bc.Timeout, ConnectTimeout: bc.ConnectTimeout, Limits: limits, Headers: headers,
-			PartialResponse: bc.PartialResponse,
+			TLS: tlsCfg, PartialResponse: bc.PartialResponse,
 		}, renderer)
 	case config.BackendThanos:
 		return thanos.New(thanos.Config{
 			QueryURLs: bc.QueryURLs, Write: write, Timeout: bc.Timeout, ConnectTimeout: bc.ConnectTimeout, Limits: limits, Headers: headers,
-			PartialResponse: bc.PartialResponse,
+			TLS: tlsCfg, PartialResponse: bc.PartialResponse,
 		}, renderer)
 	default:
 		return nil, fmt.Errorf("unknown metrics backend %q", bc.Provider)

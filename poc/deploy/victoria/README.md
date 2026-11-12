@@ -29,6 +29,19 @@ AIO11Y_BACKEND_QUERY_PASSWORD=<reader password>
 AIO11Y_BACKEND_WRITE_USERNAME=<writer>
 ```
 
+A query entrance that serves the API under a path over https with a private
+CA and a read token, such as `https://<node>:8443/metrics/api/v1/query`, takes
+the path in the address and the token instead of the reader account:
+
+```sh
+AIO11Y_BACKEND_QUERY_URL=https://<node-a>:8443/metrics,https://<node-b>:8443/metrics
+AIO11Y_BACKEND_QUERY_BEARER_TOKEN=<read token>
+AIO11Y_BACKEND_QUERY_TLS_CA_FILE=<path to the CA's PEM file>
+```
+
+`AIO11Y_BACKEND_QUERY_USERNAME` and `_QUERY_PASSWORD` stay empty then: both
+an account and a token fail startup.
+
 Each collector reads the writer's password from `AIO11Y_WRITE_PASSWORD` in its
 own environment; ai-o11y never holds it. A collector started without it runs,
 but every write is refused (401).

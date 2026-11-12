@@ -2,11 +2,15 @@ package promapi
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -283,5 +287,104 @@ func TestTimeoutSpansAddresses(t *testing.T) {
 func TestConnectTimeout(t *testing.T) {
 	if _, err := NewClient(Config{BaseURLs: []string{"http://a"}, Timeout: time.Second, ConnectTimeout: -time.Second}); err == nil {
 		t.Error("NewClient with a negative connect timeout succeeded")
+	}
+}
+
+// tlsAPI is an https query API behind a path prefix, as a proxy serves it,
+// with a certificate no system CA signs. It returns the server and the file
+// of the CA that signs it.
+func tlsAPI(t *testing.T) (*httptest.Server, string, *[]*http.Request) {
+	t.Helper()
+	var seen []*http.Request
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seen = append(seen, r)
+		if r.URL.Path != "/metrics/api/v1/query" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(`{"status":"success","data":{"resultType":"vector","result":[]}}`))
+	}))
+	t.Cleanup(srv.Close)
+	caFile := filepath.Join(t.TempDir(), "ca.pem")
+	ca := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw})
+	if err := os.WriteFile(caFile, ca, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return srv, caFile, &seen
+}
+
+func TestTLSPrivateCAWithPathPrefix(t *testing.T) {
+	srv, caFile, seen := tlsAPI(t)
+	c, err := NewClient(Config{
+		BaseURLs: []string{srv.URL + "/metrics/"},
+		Timeout:  30 * time.Second,
+		Headers:  map[string]string{"Authorization": "Bearer read-token"},
+		TLS:      TLS{CAFile: caFile},
+	})
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	if _, err := c.Instant(context.Background(), "up", time.Time{}); err != nil {
+		t.Fatalf("Instant: %v", err)
+	}
+	if len(*seen) != 1 {
+		t.Fatalf("requests = %d, want 1", len(*seen))
+	}
+	r := (*seen)[0]
+	if r.URL.Path != "/metrics/api/v1/query" {
+		t.Errorf("path = %q, want the prefix kept: /metrics/api/v1/query", r.URL.Path)
+	}
+	if got := r.Header.Get("Authorization"); got != "Bearer read-token" {
+		t.Errorf("Authorization = %q, want Bearer read-token", got)
+	}
+}
+
+func TestTLSWithoutCAFails(t *testing.T) {
+	srv, _, seen := tlsAPI(t)
+	c, err := NewClient(Config{BaseURLs: []string{srv.URL + "/metrics"}, Timeout: 30 * time.Second})
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	_, err = c.Instant(context.Background(), "up", time.Time{})
+	var unknown x509.UnknownAuthorityError
+	if !errors.Is(err, ErrUnavailable) || !errors.As(err, &unknown) {
+		t.Errorf("Instant = %v, want unreachable over an unknown CA", err)
+	}
+	if len(*seen) != 0 {
+		t.Errorf("requests = %d, want none past the handshake", len(*seen))
+	}
+}
+
+func TestTLSInsecureSkipVerify(t *testing.T) {
+	srv, _, seen := tlsAPI(t)
+	c, err := NewClient(Config{
+		BaseURLs: []string{srv.URL + "/metrics"},
+		Timeout:  30 * time.Second,
+		TLS:      TLS{InsecureSkipVerify: true},
+	})
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	if _, err := c.Instant(context.Background(), "up", time.Time{}); err != nil {
+		t.Fatalf("Instant: %v", err)
+	}
+	if len(*seen) != 1 {
+		t.Errorf("requests = %d, want 1", len(*seen))
+	}
+}
+
+func TestTLSBadCAFile(t *testing.T) {
+	notPEM := filepath.Join(t.TempDir(), "ca.pem")
+	if err := os.WriteFile(notPEM, []byte("not a certificate\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for name, file := range map[string]string{
+		"missing": filepath.Join(t.TempDir(), "absent.pem"),
+		"not PEM": notPEM,
+	} {
+		_, err := NewClient(Config{BaseURLs: []string{"https://q"}, Timeout: time.Second, TLS: TLS{CAFile: file}})
+		if err == nil {
+			t.Errorf("%s CA file: NewClient succeeded, want an error", name)
+		}
 	}
 }

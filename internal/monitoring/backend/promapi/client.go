@@ -6,6 +6,8 @@ package promapi
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +16,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -37,7 +40,8 @@ const (
 // Config is where the query API is and how every request is sent.
 type Config struct {
 	// BaseURLs are the addresses the /api/v1 paths hang from, such as
-	// "http://thanos-query:10902", in order of preference. Every request
+	// "http://thanos-query:10902" or "https://vm-a:8443/metrics" behind a
+	// proxy that serves the API under a path, in order of preference. Every request
 	// starts at the first; it moves to the next when an address cannot be
 	// reached or answers with a 5xx. Each address serves the same data, such
 	// as two queriers or two query proxies in front of replicated storage.
@@ -54,6 +58,39 @@ type Config struct {
 	Headers map[string]string
 	// Params are added to every query, such as Thanos' dedup.
 	Params url.Values
+	// TLS is how https addresses are verified.
+	TLS TLS
+}
+
+// TLS is how the certificates of https query addresses are verified. The zero
+// value verifies them against the system's CAs.
+type TLS struct {
+	// CAFile is a PEM file of the CAs to verify against instead of the
+	// system's, such as a private CA.
+	CAFile string
+	// InsecureSkipVerify accepts any certificate. It is for trying out a
+	// setup only: anyone on the path can then read and answer queries.
+	InsecureSkipVerify bool
+}
+
+// config builds the client TLS configuration; nil keeps Go's default.
+func (t TLS) config() (*tls.Config, error) {
+	if t.CAFile == "" && !t.InsecureSkipVerify {
+		return nil, nil
+	}
+	cfg := &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: t.InsecureSkipVerify}
+	if t.CAFile != "" {
+		pem, err := os.ReadFile(t.CAFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read query CA file: %w", err)
+		}
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM(pem) {
+			return nil, fmt.Errorf("query CA file %s holds no PEM certificate", t.CAFile)
+		}
+		cfg.RootCAs = pool
+	}
+	return cfg, nil
 }
 
 // Client sends PromQL to the query API. Every query is a form POST: a query
@@ -88,8 +125,15 @@ func NewClient(cfg Config) (*Client, error) {
 	if cfg.ConnectTimeout == 0 {
 		cfg.ConnectTimeout = DefaultConnectTimeout
 	}
+	tlsConfig, err := cfg.TLS.config()
+	if err != nil {
+		return nil, err
+	}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.DialContext = (&net.Dialer{Timeout: cfg.ConnectTimeout, KeepAlive: 30 * time.Second}).DialContext
+	if tlsConfig != nil {
+		transport.TLSClientConfig = tlsConfig
+	}
 	return &Client{
 		cfg:        cfg,
 		baseURLs:   baseURLs,
