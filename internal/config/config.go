@@ -30,6 +30,13 @@ type CollectorConfig struct {
 	// StorageDir is the directory on a collector's host its disk queue is
 	// kept in.
 	StorageDir string
+	// TLSCAFile is a PEM file on each collector's host of the CAs https write
+	// addresses are verified against instead of the system's. Only the path
+	// goes into the rendered configuration.
+	TLSCAFile string
+	// TLSInsecureSkipVerify makes collectors accept any certificate from a
+	// write address. Off by default; on is for trying out a setup only.
+	TLSInsecureSkipVerify bool
 }
 
 // BackendConfig is the metrics backend. The settings are the same whichever
@@ -46,6 +53,12 @@ type BackendConfig struct {
 	// preference, given as a comma-separated list; a collector moves to the
 	// next while one fails. The collector appends /v1/metrics to each.
 	WriteURLs []string
+	// LogsWriteURLs and TracesWriteURLs are where collectors send the host's
+	// journal and the spans its applications send them, by the same rules
+	// as WriteURLs; the collector appends /v1/logs and /v1/traces. Empty
+	// leaves that signal out of the collector configuration.
+	LogsWriteURLs   []string
+	TracesWriteURLs []string
 	// Timeout bounds one query, across every query address it is tried at.
 	// ConnectTimeout bounds connecting to one address. Left empty, each takes
 	// the provider's default; a value given must be positive.
@@ -141,6 +154,7 @@ func Load() (*Config, error) {
 	v.SetDefault("backend.partial_response", false)
 	v.SetDefault("backend.query_tls_insecure_skip_verify", false)
 	v.SetDefault("collector.storage_dir", "/var/lib/aio11y-otelcol/queue")
+	v.SetDefault("collector.tls_insecure_skip_verify", false)
 
 	// Every key is bound on its own rather than through AutomaticEnv: with it,
 	// AIO11Y_BACKEND set would shadow every backend.* key as their parent.
@@ -162,6 +176,8 @@ func Load() (*Config, error) {
 		"db.write_timeout",
 		"backend.query_url",
 		"backend.write_url",
+		"backend.logs_write_url",
+		"backend.traces_write_url",
 		"backend.timeout",
 		"backend.connect_timeout",
 		"backend.max_concurrent",
@@ -175,6 +191,8 @@ func Load() (*Config, error) {
 		"backend.write_username",
 		"collector.telemetry_port",
 		"collector.storage_dir",
+		"collector.tls_ca_file",
+		"collector.tls_insecure_skip_verify",
 	} {
 		if err := v.BindEnv(key); err != nil {
 			return nil, fmt.Errorf("failed to bind env for %q: %w", key, err)
@@ -227,11 +245,16 @@ func Load() (*Config, error) {
 		Collector: CollectorConfig{
 			TelemetryPort: v.GetInt("collector.telemetry_port"),
 			StorageDir:    v.GetString("collector.storage_dir"),
+
+			TLSCAFile:             strings.TrimSpace(v.GetString("collector.tls_ca_file")),
+			TLSInsecureSkipVerify: v.GetBool("collector.tls_insecure_skip_verify"),
 		},
 		Backend: BackendConfig{
 			Provider:        strings.ToLower(strings.TrimSpace(v.GetString("backend.provider"))),
 			QueryURLs:       splitURLs(v.GetString("backend.query_url")),
 			WriteURLs:       splitURLs(v.GetString("backend.write_url")),
+			LogsWriteURLs:   splitURLs(v.GetString("backend.logs_write_url")),
+			TracesWriteURLs: splitURLs(v.GetString("backend.traces_write_url")),
 			Timeout:         timeout,
 			ConnectTimeout:  connectTimeout,
 			MaxConcurrent:   maxConcurrent,

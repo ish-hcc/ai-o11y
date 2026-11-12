@@ -43,11 +43,12 @@ printed.
 | `/etc/aio11y-otelcol/env` | `AIO11Y_WRITE_PASSWORD`, which the configuration reads as `${env:AIO11Y_WRITE_PASSWORD}` (0600). Absent when no password was given. |
 | `/etc/aio11y-otelcol/target-id`, `server` | The target id and the ai-o11y address, for `--config-only` and `uninstall.sh --deregister`. |
 | `/etc/systemd/system/aio11y-otelcol.service` | The unit ([aio11y-otelcol.service](aio11y-otelcol.service)). |
-| `/var/lib/aio11y-otelcol` | The service's state directory (systemd `StateDirectory`), where the exporters keep their disk queue. |
+| `/var/lib/aio11y-otelcol` | The service's state directory (systemd `StateDirectory`), where the exporters keep their disk queue and the journald receiver its cursor. |
 
 The service runs as root: the GPU receivers run `nvidia-smi` and `amd-smi`
-(which opens `/dev/kfd`), XID counting reads `/dev/kmsg`, and the process
-scraper reads every process. It restarts on failure and is limited to 512 MiB
+(which opens `/dev/kfd`), XID counting reads `/dev/kmsg`, the process
+scraper reads every process, and the journald receiver, when logs are
+configured, reads the whole system journal. It restarts on failure and is limited to 512 MiB
 of memory (`MemoryMax`).
 
 ## Requirements

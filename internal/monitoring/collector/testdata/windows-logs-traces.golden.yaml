@@ -1,0 +1,115 @@
+exporters:
+    otlp_http:
+        endpoint: http://prometheus:9090/api/v1/otlp
+        retry_on_failure:
+            enabled: true
+            max_elapsed_time: 0s
+        sending_queue:
+            enabled: true
+            num_consumers: 1
+            queue_size: 268435456
+            sizer: bytes
+            storage: file_storage/queue
+    otlp_http/traces:
+        endpoint: http://vtinsert:10481/insert/opentelemetry
+        retry_on_failure:
+            enabled: true
+            max_elapsed_time: 0s
+        sending_queue:
+            enabled: true
+            num_consumers: 1
+            queue_size: 268435456
+            sizer: bytes
+            storage: file_storage/queue_traces
+extensions:
+    file_storage/queue:
+        create_directory: true
+        directory: /var/lib/aio11y-otelcol/queue
+    file_storage/queue_traces:
+        create_directory: true
+        directory: /var/lib/aio11y-otelcol/queue/traces
+processors:
+    attributes/identity:
+        actions:
+            - action: upsert
+              key: entity_id
+              value: d44ikdomt0tac4ejrmmg
+    batch: {}
+    memory_limiter:
+        check_interval: 1s
+        limit_mib: 400
+        spike_limit_mib: 100
+    top_process:
+        by:
+            - cpu
+            - memory
+        top_n: 10
+receivers:
+    host_metrics:
+        collection_interval: 30s
+        scrapers:
+            cpu:
+                metrics:
+                    system.cpu.physical.count:
+                        enabled: true
+            disk: {}
+            filesystem: {}
+            load: {}
+            memory:
+                metrics:
+                    system.linux.memory.available:
+                        enabled: true
+                    system.memory.limit:
+                        enabled: true
+                    system.memory.linux.shared:
+                        enabled: true
+                    system.memory.utilization:
+                        enabled: true
+            network: {}
+            paging: {}
+            process:
+                metrics:
+                    process.cpu.utilization:
+                        enabled: true
+                    process.memory.utilization:
+                        enabled: true
+                mute_process_cgroup_error: true
+                mute_process_exe_error: true
+                mute_process_io_error: true
+                mute_process_name_error: true
+                mute_process_user_error: true
+            processes: {}
+            system: {}
+    otlp:
+        protocols:
+            grpc:
+                endpoint: 127.0.0.1:4317
+            http:
+                endpoint: 127.0.0.1:4318
+service:
+    extensions:
+        - file_storage/queue
+        - file_storage/queue_traces
+    pipelines:
+        metrics:
+            exporters:
+                - otlp_http
+            processors:
+                - memory_limiter
+                - top_process
+                - attributes/identity
+                - batch
+            receivers:
+                - host_metrics
+        traces:
+            exporters:
+                - otlp_http/traces
+            processors:
+                - memory_limiter
+                - attributes/identity
+                - batch
+            receivers:
+                - otlp
+    telemetry:
+        metrics:
+            level: none

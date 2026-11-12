@@ -120,6 +120,8 @@ func TestTemplateVariablesLoad(t *testing.T) {
 		"AIO11Y_BACKEND":                                {"VICTORIA", func(c *Config) any { return c.Backend.Provider }, BackendVictoria, nil},
 		"AIO11Y_BACKEND_QUERY_URL":                      {"http://q1, http://q2/", func(c *Config) any { return strings.Join(c.Backend.QueryURLs, ",") }, "http://q1,http://q2", nil},
 		"AIO11Y_BACKEND_WRITE_URL":                      {"http://w1/", func(c *Config) any { return strings.Join(c.Backend.WriteURLs, ",") }, "http://w1", nil},
+		"AIO11Y_BACKEND_LOGS_WRITE_URL":                 {"http://l1/, http://l2", func(c *Config) any { return strings.Join(c.Backend.LogsWriteURLs, ",") }, "http://l1,http://l2", nil},
+		"AIO11Y_BACKEND_TRACES_WRITE_URL":               {"http://t1/", func(c *Config) any { return strings.Join(c.Backend.TracesWriteURLs, ",") }, "http://t1", nil},
 		"AIO11Y_BACKEND_TIMEOUT":                        {"45s", func(c *Config) any { return c.Backend.Timeout }, 45 * time.Second, nil},
 		"AIO11Y_BACKEND_CONNECT_TIMEOUT":                {"4s", func(c *Config) any { return c.Backend.ConnectTimeout }, 4 * time.Second, nil},
 		"AIO11Y_BACKEND_MAX_CONCURRENT":                 {"3", func(c *Config) any { return c.Backend.MaxConcurrent }, 3, nil},
@@ -132,6 +134,8 @@ func TestTemplateVariablesLoad(t *testing.T) {
 		"AIO11Y_BACKEND_QUERY_TLS_CA_FILE":              {" /etc/aio11y/ca.pem ", func(c *Config) any { return c.Backend.QueryTLSCAFile }, "/etc/aio11y/ca.pem", nil},
 		"AIO11Y_BACKEND_QUERY_TLS_INSECURE_SKIP_VERIFY": {"true", func(c *Config) any { return c.Backend.QueryTLSInsecureSkipVerify }, true, nil},
 		"AIO11Y_COLLECTOR_TELEMETRY_PORT":               {"8888", func(c *Config) any { return c.Collector.TelemetryPort }, 8888, nil},
+		"AIO11Y_COLLECTOR_TLS_CA_FILE":                  {" /etc/aio11y-otelcol/ca.pem ", func(c *Config) any { return c.Collector.TLSCAFile }, "/etc/aio11y-otelcol/ca.pem", nil},
+		"AIO11Y_COLLECTOR_TLS_INSECURE_SKIP_VERIFY":     {"true", func(c *Config) any { return c.Collector.TLSInsecureSkipVerify }, true, nil},
 		"AIO11Y_COLLECTOR_STORAGE_DIR":                  {"/srv/queue", func(c *Config) any { return c.Collector.StorageDir }, "/srv/queue", nil},
 	}
 

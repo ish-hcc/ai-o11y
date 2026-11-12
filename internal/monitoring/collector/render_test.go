@@ -437,3 +437,174 @@ func TestRenderDiskQueue(t *testing.T) {
 		}
 	}
 }
+
+// logsTraces are a logs and a traces write endpoint, as VictoriaLogs and
+// VictoriaTraces take OTLP.
+var (
+	logsEndpoint   = []monitoring.Endpoint{{URL: "http://vlinsert:9481/insert/opentelemetry"}}
+	tracesEndpoint = []monitoring.Endpoint{{URL: "http://vtinsert:10481/insert/opentelemetry"}}
+)
+
+// TestRenderLogsTracesSnapshot pins the logs and traces pipelines: one
+// endpoint each on Linux; two each with a write account and a private CA;
+// and a Windows target, which gets traces but no logs.
+func TestRenderLogsTracesSnapshot(t *testing.T) {
+	account := &monitoring.BasicAuth{Username: "writer", PasswordEnv: WritePasswordEnv}
+	two := func(a, b string) []monitoring.Endpoint {
+		return []monitoring.Endpoint{{URL: a, BasicAuth: account}, {URL: b, BasicAuth: account}}
+	}
+	windows := vm()
+	windows.OS = "windows"
+	for golden, tc := range map[string]struct {
+		target    monitoring.Target
+		endpoints []monitoring.Endpoint
+		opts      Options
+	}{
+		"vm-logs-traces.golden.yaml": {vm(), endpoint, Options{LogsEndpoints: logsEndpoint, TracesEndpoints: tracesEndpoint}},
+		"vm-logs-traces-failover-tls.golden.yaml": {vm(), two("https://vm-a:4318/opentelemetry", "https://vm-b:4318/opentelemetry"), Options{
+			LogsEndpoints:   two("https://vm-a:4318/insert/opentelemetry", "https://vm-b:4318/insert/opentelemetry"),
+			TracesEndpoints: two("https://vm-a:4318/insert/opentelemetry", "https://vm-b:4318/insert/opentelemetry"),
+			TLS:             TLS{CAFile: "/etc/aio11y-otelcol/ca.pem"},
+		}},
+		"windows-logs-traces.golden.yaml": {windows, endpoint, Options{LogsEndpoints: logsEndpoint, TracesEndpoints: tracesEndpoint}},
+	} {
+		got, err := Render(tc.target, kinds, builtin(t), tc.endpoints, tc.opts)
+		if err != nil {
+			t.Fatalf("%s: Render: %v", golden, err)
+		}
+		checkGolden(t, golden, got)
+	}
+}
+
+// signalsConfig is the parts of a rendered configuration the signal tests
+// look at.
+type signalsConfig struct {
+	Receivers  map[string]any            `yaml:"receivers"`
+	Exporters  map[string]map[string]any `yaml:"exporters"`
+	Extensions map[string]map[string]any `yaml:"extensions"`
+	Service    struct {
+		Pipelines map[string]struct {
+			Receivers  []string `yaml:"receivers"`
+			Processors []string `yaml:"processors"`
+			Exporters  []string `yaml:"exporters"`
+		} `yaml:"pipelines"`
+	} `yaml:"service"`
+}
+
+// TestRenderSignals: each signal is a pipeline of its own only when it has
+// endpoints, with its own disk queue directory, the memory limiter, identity
+// and batch processors, and the journal on Linux only.
+func TestRenderSignals(t *testing.T) {
+	windows := vm()
+	windows.OS = "Windows"
+	for name, tc := range map[string]struct {
+		target     monitoring.Target
+		opts       Options
+		wantLogs   bool
+		wantTraces bool
+	}{
+		"metrics only": {vm(), Options{}, false, false},
+		"logs":         {vm(), Options{LogsEndpoints: logsEndpoint}, true, false},
+		"traces":       {vm(), Options{TracesEndpoints: tracesEndpoint}, false, true},
+		"both":         {vm(), Options{LogsEndpoints: logsEndpoint, TracesEndpoints: tracesEndpoint, StorageDir: "/srv/q"}, true, true},
+		"windows":      {windows, Options{LogsEndpoints: logsEndpoint, TracesEndpoints: tracesEndpoint}, false, true},
+	} {
+		out, err := Render(tc.target, kinds, builtin(t), endpoint, tc.opts)
+		if err != nil {
+			t.Fatalf("%s: Render: %v", name, err)
+		}
+		var cfg signalsConfig
+		if err := yaml.Unmarshal(out, &cfg); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		logs, hasLogs := cfg.Service.Pipelines["logs"]
+		traces, hasTraces := cfg.Service.Pipelines["traces"]
+		_, hasJournald := cfg.Receivers[JournaldReceiver]
+		_, hasOTLP := cfg.Receivers[OTLPReceiver]
+		if hasLogs != tc.wantLogs || hasJournald != tc.wantLogs || hasTraces != tc.wantTraces || hasOTLP != tc.wantTraces {
+			t.Errorf("%s: logs %v journald %v traces %v otlp %v; want logs %v traces %v", name, hasLogs, hasJournald, hasTraces, hasOTLP, tc.wantLogs, tc.wantTraces)
+		}
+		if slices.Contains(cfg.Service.Pipelines["metrics"].Receivers, JournaldReceiver) || slices.Contains(cfg.Service.Pipelines["metrics"].Receivers, OTLPReceiver) {
+			t.Errorf("%s: metrics pipeline takes %v", name, cfg.Service.Pipelines["metrics"].Receivers)
+		}
+		want := []string{MemoryLimiterProcessor, monitoring.IdentityProcessor, BatchProcessor}
+		if hasLogs && (!slices.Equal(logs.Processors, want) || !slices.Equal(logs.Receivers, []string{JournaldReceiver}) || !slices.Equal(logs.Exporters, []string{ExporterOTLPHTTP + "/logs"})) {
+			t.Errorf("%s: logs pipeline %+v", name, logs)
+		}
+		if hasTraces && (!slices.Equal(traces.Processors, want) || !slices.Equal(traces.Receivers, []string{OTLPReceiver}) || !slices.Equal(traces.Exporters, []string{ExporterOTLPHTTP + "/traces"})) {
+			t.Errorf("%s: traces pipeline %+v", name, traces)
+		}
+		dirs := map[string]string{}
+		for id, ext := range cfg.Extensions {
+			if !strings.HasPrefix(id, "file_storage/") {
+				continue
+			}
+			dir, _ := ext["directory"].(string)
+			if other, ok := dirs[dir]; ok {
+				t.Errorf("%s: %s and %s share %s", name, id, other, dir)
+			}
+			dirs[dir] = id
+		}
+		base := tc.opts.StorageDir
+		if base == "" {
+			base = DefaultStorageDir
+		}
+		if tc.wantLogs && dirs[base+"/logs"] != ExtensionQueueStorage+"_logs" {
+			t.Errorf("%s: logs queue directories %v", name, dirs)
+		}
+		if tc.wantTraces && dirs[base+"/traces"] != ExtensionQueueStorage+"_traces" {
+			t.Errorf("%s: traces queue directories %v", name, dirs)
+		}
+		for _, id := range []string{ExporterOTLPHTTP + "/logs", ExporterOTLPHTTP + "/traces"} {
+			if e, ok := cfg.Exporters[id]; ok {
+				q, _ := e["sending_queue"].(map[string]any)
+				if q["storage"] != ExtensionQueueStorage+"_"+strings.TrimPrefix(id, ExporterOTLPHTTP+"/") {
+					t.Errorf("%s: %s queue %v", name, id, q)
+				}
+			}
+		}
+	}
+}
+
+// TestRenderTLS: the TLS settings go on every exporter, and none renders no
+// tls section.
+func TestRenderTLS(t *testing.T) {
+	opts := Options{LogsEndpoints: logsEndpoint, TracesEndpoints: tracesEndpoint, TLS: TLS{CAFile: "/etc/ca.pem", InsecureSkipVerify: true}}
+	out, err := Render(vm(), kinds, builtin(t), failover, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg signalsConfig
+	if err := yaml.Unmarshal(out, &cfg); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]any{"ca_file": "/etc/ca.pem", "insecure_skip_verify": true}
+	if len(cfg.Exporters) != 4 {
+		t.Errorf("%d exporters, want 4", len(cfg.Exporters))
+	}
+	for id, e := range cfg.Exporters {
+		if !reflect.DeepEqual(e["tls"], want) {
+			t.Errorf("%s: tls = %v, want %v", id, e["tls"], want)
+		}
+	}
+	plain, err := Render(vm(), kinds, builtin(t), failover, Options{LogsEndpoints: logsEndpoint})
+	if err != nil || strings.Contains(string(plain), "tls:") {
+		t.Errorf("no TLS settings rendered a tls section: %v\n%s", err, plain)
+	}
+}
+
+func TestRenderSignalRejects(t *testing.T) {
+	otlpKind := fixedKind{frag: monitoring.ConfigFragment{Receivers: map[string]any{OTLPReceiver: map[string]any{}}}}
+	for name, tc := range map[string]struct {
+		kinds []monitoring.CollectorKind
+		opts  Options
+	}{
+		"logs endpoint no URL":  {kinds, Options{LogsEndpoints: []monitoring.Endpoint{{}}}},
+		"traces account no env": {kinds, Options{TracesEndpoints: []monitoring.Endpoint{{URL: "http://vt", BasicAuth: &monitoring.BasicAuth{Username: "writer"}}}}},
+		"otlp receiver clashes": {[]monitoring.CollectorKind{Hostmetrics{}, otlpKind}, Options{TracesEndpoints: tracesEndpoint}},
+	} {
+		if _, err := Render(vm(), tc.kinds, builtin(t), endpoint, tc.opts); err == nil {
+			t.Errorf("%s: Render succeeded", name)
+		}
+	}
+}

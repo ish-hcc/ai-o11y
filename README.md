@@ -4,7 +4,9 @@ Monitoring control plane for the AI-MCMP platform. It keeps the monitoring
 targets, renders the configuration of the collector that runs on each target,
 and answers metric queries over a Prometheus-family backend (Thanos or
 VictoriaMetrics). Samples go from the collectors to the backend, never through
-this service.
+this service. Collectors can also send the host's systemd journal and the
+traces of its applications over OTLP, such as to VictoriaLogs and
+VictoriaTraces; ai-o11y does not query them.
 
 ```
 CB-Tumblebug ──(targets)──▶ ai-o11y ──(PromQL)──▶ Thanos / VictoriaMetrics
@@ -12,7 +14,8 @@ CB-Tumblebug ──(targets)──▶ ai-o11y ──(PromQL)──▶ Thanos / V
                      collector config                  │ OTLP/HTTP
                               ▼                        │
                         VM: aio11y-otelcol ────────────┘
-                        (host metrics, NVIDIA and AMD GPUs)
+                        (host metrics, NVIDIA and AMD GPUs;
+                         journal and traces when configured)
 ```
 
 ## Layout
@@ -80,6 +83,16 @@ All routes are under `/aio11y` and, when `AIO11Y_AUTH_TOKEN` is set, need
   (Prometheus without an out-of-order window) may refuse it. The collector
   refuses new samples while it uses more than 300 MiB of memory (memory
   limiter at 400 MiB with 100 MiB headroom).
+- **Logs and traces**: with `AIO11Y_BACKEND_LOGS_WRITE_URL` or
+  `_TRACES_WRITE_URL` set, collectors send logs or traces by the same failover
+  and disk queue rules as samples, each signal with a queue of its own (up to
+  256 MiB) under `AIO11Y_COLLECTOR_STORAGE_DIR`. Logs are the systemd journal
+  from the collector's first start on (`journalctl`, priority info and above),
+  read on after a restart from where it stopped; Windows targets send no logs,
+  their event log is not read yet. Traces are what applications on the host
+  send the collector over OTLP on `127.0.0.1:4317` (gRPC) and
+  `127.0.0.1:4318` (HTTP): another program holding either port there keeps
+  the collector from starting. ai-o11y has no logs or traces query yet.
 - **Processes**: per-process fields cover only the 10 processes using the
   most CPU and the 10 using the most memory in each collection, added up by
   executable name.
@@ -119,9 +132,12 @@ All routes are under `/aio11y` and, when `AIO11Y_AUTH_TOKEN` is set, need
   (`AIO11Y_BACKEND_QUERY_USERNAME`, `_QUERY_PASSWORD`) or a bearer token
   (`AIO11Y_BACKEND_QUERY_BEARER_TOKEN`), not both; https query addresses are
   verified against the system's CAs or `AIO11Y_BACKEND_QUERY_TLS_CA_FILE`.
-  Collectors write with basic auth only and read the write account's password
+  Collectors write with basic auth only, the same account for metrics, logs
+  and traces, and read the write account's password
   from `AIO11Y_WRITE_PASSWORD` on their host; a collector without it still
-  starts, and every write is refused. Over plain HTTP the accounts travel in
+  starts, and every write is refused. Collectors verify https write addresses
+  against the system's CAs or `AIO11Y_COLLECTOR_TLS_CA_FILE`, a file that must
+  be on each collector's host. Over plain HTTP the accounts travel in
   clear text; outside a private network the backend needs TLS in front.
 - **Metric catalog**: see the known limits in
   [docs/metric-catalog.md](docs/metric-catalog.md).

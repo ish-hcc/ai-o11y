@@ -1,0 +1,262 @@
+connectors:
+    failover:
+        priority_levels:
+            - - metrics/0
+            - - metrics/1
+    failover/logs:
+        priority_levels:
+            - - logs/0
+            - - logs/1
+    failover/traces:
+        priority_levels:
+            - - traces/0
+            - - traces/1
+exporters:
+    otlp_http/0:
+        auth:
+            authenticator: basicauth/0
+        endpoint: https://vm-a:4318/opentelemetry
+        retry_on_failure:
+            enabled: false
+        sending_queue:
+            enabled: false
+        tls:
+            ca_file: /etc/aio11y-otelcol/ca.pem
+    otlp_http/1:
+        auth:
+            authenticator: basicauth/1
+        endpoint: https://vm-b:4318/opentelemetry
+        retry_on_failure:
+            enabled: true
+            max_elapsed_time: 0s
+        sending_queue:
+            enabled: true
+            num_consumers: 1
+            queue_size: 268435456
+            sizer: bytes
+            storage: file_storage/queue
+        tls:
+            ca_file: /etc/aio11y-otelcol/ca.pem
+    otlp_http/logs_0:
+        auth:
+            authenticator: basicauth/logs_0
+        endpoint: https://vm-a:4318/insert/opentelemetry
+        retry_on_failure:
+            enabled: false
+        sending_queue:
+            enabled: false
+        tls:
+            ca_file: /etc/aio11y-otelcol/ca.pem
+    otlp_http/logs_1:
+        auth:
+            authenticator: basicauth/logs_1
+        endpoint: https://vm-b:4318/insert/opentelemetry
+        retry_on_failure:
+            enabled: true
+            max_elapsed_time: 0s
+        sending_queue:
+            enabled: true
+            num_consumers: 1
+            queue_size: 268435456
+            sizer: bytes
+            storage: file_storage/queue_logs
+        tls:
+            ca_file: /etc/aio11y-otelcol/ca.pem
+    otlp_http/traces_0:
+        auth:
+            authenticator: basicauth/traces_0
+        endpoint: https://vm-a:4318/insert/opentelemetry
+        retry_on_failure:
+            enabled: false
+        sending_queue:
+            enabled: false
+        tls:
+            ca_file: /etc/aio11y-otelcol/ca.pem
+    otlp_http/traces_1:
+        auth:
+            authenticator: basicauth/traces_1
+        endpoint: https://vm-b:4318/insert/opentelemetry
+        retry_on_failure:
+            enabled: true
+            max_elapsed_time: 0s
+        sending_queue:
+            enabled: true
+            num_consumers: 1
+            queue_size: 268435456
+            sizer: bytes
+            storage: file_storage/queue_traces
+        tls:
+            ca_file: /etc/aio11y-otelcol/ca.pem
+extensions:
+    basicauth/0:
+        client_auth:
+            password: ${env:AIO11Y_WRITE_PASSWORD}
+            username: writer
+    basicauth/1:
+        client_auth:
+            password: ${env:AIO11Y_WRITE_PASSWORD}
+            username: writer
+    basicauth/logs_0:
+        client_auth:
+            password: ${env:AIO11Y_WRITE_PASSWORD}
+            username: writer
+    basicauth/logs_1:
+        client_auth:
+            password: ${env:AIO11Y_WRITE_PASSWORD}
+            username: writer
+    basicauth/traces_0:
+        client_auth:
+            password: ${env:AIO11Y_WRITE_PASSWORD}
+            username: writer
+    basicauth/traces_1:
+        client_auth:
+            password: ${env:AIO11Y_WRITE_PASSWORD}
+            username: writer
+    file_storage/journald:
+        create_directory: true
+        directory: /var/lib/aio11y-otelcol/queue/journald
+    file_storage/queue:
+        create_directory: true
+        directory: /var/lib/aio11y-otelcol/queue
+    file_storage/queue_logs:
+        create_directory: true
+        directory: /var/lib/aio11y-otelcol/queue/logs
+    file_storage/queue_traces:
+        create_directory: true
+        directory: /var/lib/aio11y-otelcol/queue/traces
+processors:
+    attributes/identity:
+        actions:
+            - action: upsert
+              key: entity_id
+              value: d44ikdomt0tac4ejrmmg
+    batch: {}
+    memory_limiter:
+        check_interval: 1s
+        limit_mib: 400
+        spike_limit_mib: 100
+    top_process:
+        by:
+            - cpu
+            - memory
+        top_n: 10
+receivers:
+    host_metrics:
+        collection_interval: 30s
+        scrapers:
+            cpu:
+                metrics:
+                    system.cpu.physical.count:
+                        enabled: true
+            disk: {}
+            filesystem: {}
+            load: {}
+            memory:
+                metrics:
+                    system.linux.memory.available:
+                        enabled: true
+                    system.memory.limit:
+                        enabled: true
+                    system.memory.linux.shared:
+                        enabled: true
+                    system.memory.utilization:
+                        enabled: true
+            network: {}
+            paging: {}
+            process:
+                metrics:
+                    process.cpu.utilization:
+                        enabled: true
+                    process.memory.utilization:
+                        enabled: true
+                mute_process_cgroup_error: true
+                mute_process_exe_error: true
+                mute_process_io_error: true
+                mute_process_name_error: true
+                mute_process_user_error: true
+            processes: {}
+            system: {}
+    journald:
+        convert_to_semantic_conventions: true
+        start_at: end
+        storage: file_storage/journald
+    otlp:
+        protocols:
+            grpc:
+                endpoint: 127.0.0.1:4317
+            http:
+                endpoint: 127.0.0.1:4318
+service:
+    extensions:
+        - basicauth/0
+        - basicauth/1
+        - basicauth/logs_0
+        - basicauth/logs_1
+        - basicauth/traces_0
+        - basicauth/traces_1
+        - file_storage/journald
+        - file_storage/queue
+        - file_storage/queue_logs
+        - file_storage/queue_traces
+    pipelines:
+        logs:
+            exporters:
+                - failover/logs
+            processors:
+                - memory_limiter
+                - attributes/identity
+                - batch
+            receivers:
+                - journald
+        logs/0:
+            exporters:
+                - otlp_http/logs_0
+            receivers:
+                - failover/logs
+        logs/1:
+            exporters:
+                - otlp_http/logs_1
+            receivers:
+                - failover/logs
+        metrics:
+            exporters:
+                - failover
+            processors:
+                - memory_limiter
+                - top_process
+                - attributes/identity
+                - batch
+            receivers:
+                - host_metrics
+        metrics/0:
+            exporters:
+                - otlp_http/0
+            receivers:
+                - failover
+        metrics/1:
+            exporters:
+                - otlp_http/1
+            receivers:
+                - failover
+        traces:
+            exporters:
+                - failover/traces
+            processors:
+                - memory_limiter
+                - attributes/identity
+                - batch
+            receivers:
+                - otlp
+        traces/0:
+            exporters:
+                - otlp_http/traces_0
+            receivers:
+                - failover/traces
+        traces/1:
+            exporters:
+                - otlp_http/traces_1
+            receivers:
+                - failover/traces
+    telemetry:
+        metrics:
+            level: none

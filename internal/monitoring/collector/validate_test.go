@@ -22,13 +22,23 @@ func TestRenderedConfigValidates(t *testing.T) {
 	windows.OS = "windows"
 	telemetryPorts := map[string]int{"gpu vm": 18889}
 	authed := []monitoring.Endpoint{{URL: failover[0].URL, BasicAuth: &monitoring.BasicAuth{Username: "writer", PasswordEnv: WritePasswordEnv}}}
-	endpoints := map[string][]monitoring.Endpoint{"failover vm": failover, "account vm": authed}
-	for name, target := range map[string]monitoring.Target{"linux vm": vm(), "windows vm": windows, "gpu vm": gpuVM(), "amd gpu vm": amdGPUVM(), "failover vm": vm(), "account vm": vm()} {
+	endpoints := map[string][]monitoring.Endpoint{"failover vm": failover, "account vm": authed, "signals failover tls vm": failover}
+	signals := map[string]Options{
+		"signals vm":              {LogsEndpoints: logsEndpoint, TracesEndpoints: tracesEndpoint},
+		"signals failover tls vm": {LogsEndpoints: failover, TracesEndpoints: authed, TLS: TLS{CAFile: "/etc/aio11y-otelcol/ca.pem", InsecureSkipVerify: true}},
+		"signals windows vm":      {LogsEndpoints: logsEndpoint, TracesEndpoints: tracesEndpoint},
+	}
+	for name, target := range map[string]monitoring.Target{
+		"linux vm": vm(), "windows vm": windows, "gpu vm": gpuVM(), "amd gpu vm": amdGPUVM(), "failover vm": vm(), "account vm": vm(),
+		"signals vm": vm(), "signals failover tls vm": vm(), "signals windows vm": windows,
+	} {
 		ep := endpoint
 		if e, ok := endpoints[name]; ok {
 			ep = e
 		}
-		out, err := Render(target, kinds, builtin(t), ep, Options{TelemetryPort: telemetryPorts[name]})
+		opts := signals[name]
+		opts.TelemetryPort = telemetryPorts[name]
+		out, err := Render(target, kinds, builtin(t), ep, opts)
 		if err != nil {
 			t.Fatalf("%s: Render: %v", name, err)
 		}
